@@ -3,9 +3,16 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ShoppingCart, Search, Menu, X } from "lucide-react";
+import { useCart } from "@/src/context/CartContext";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const { cart } = useCart();
+
+  const cartCount = cart.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
 
   return (
     <header className="fixed top-0 w-full z-50">
@@ -37,7 +44,20 @@ export default function Navbar() {
         {/* RIGHT ICONS */}
         <div className="hidden md:flex items-center gap-5 text-gray-300">
           <Search className="hover:text-[#d4af37] cursor-pointer transition" />
-          <ShoppingCart className="hover:text-[#d4af37] cursor-pointer transition" />
+
+          {/* CART ICON */}
+          <Link href="/cart" className="relative">
+            <ShoppingCart className="hover:text-[#d4af37] cursor-pointer transition" />
+            {cartCount > 0 && (
+              <span
+                className="absolute -top-2 -right-2 bg-[#d4af37] text-black
+                text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center"
+              >
+                {cartCount}
+              </span>
+            )}
+          </Link>
+
           <Link
             href="/login"
             className="px-4 py-2 rounded-full border border-[#d4af37]
@@ -70,9 +90,21 @@ export default function Navbar() {
             </Link>
           ))}
 
-          <div className="flex gap-4 pt-4">
+          <div className="flex gap-6 pt-4">
             <Search />
-            <ShoppingCart />
+
+            {/* CART ICON MOBILE */}
+            <Link href="/cart" className="relative">
+              <ShoppingCart />
+              {cartCount > 0 && (
+                <span
+                  className="absolute -top-2 -right-2 bg-[#d4af37] text-black
+                  text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center"
+                >
+                  {cartCount}
+                </span>
+              )}
+            </Link>
           </div>
 
           <Link
