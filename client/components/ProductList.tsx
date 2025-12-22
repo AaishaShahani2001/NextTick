@@ -1,8 +1,8 @@
-// TEMP PRODUCTS – PHASE 1 (UI Development)
-
+import ProductCard from "./ProductCard";
 import { ProductsType } from "@/src/types/product";
 
-const products:ProductsType = [
+// TEMP PRODUCTS – PHASE 1 (UI Development)
+const products: ProductsType = [
   {
     id: 1,
     name: "ChronoLux Steel Royale",
@@ -18,7 +18,6 @@ const products:ProductsType = [
     },
     isFeatured: true
   },
-
   {
     id: 2,
     name: "ChronoLux Midnight Leather",
@@ -34,7 +33,6 @@ const products:ProductsType = [
     },
     isFeatured: false
   },
-
   {
     id: 3,
     name: "ChronoLux Sport Pro X",
@@ -53,12 +51,16 @@ const products:ProductsType = [
   }
 ];
 
-
-
 const ProductList = () => {
   return (
-    <div>ProductList</div>
-  )
-}
+    <div className="w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-12">
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+    </div>
+  );
+};
 
-export default ProductList
+export default ProductList;
