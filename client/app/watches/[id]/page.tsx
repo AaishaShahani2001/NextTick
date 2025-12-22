@@ -2,9 +2,11 @@
 
 import { useParams } from "next/navigation";
 import Image from "next/image";
+import { useState } from "react";
 import { ProductsType, ProductType } from "@/src/types/product";
+import { useCart } from "@/src/context/CartContext";
 
-// TEMP PRODUCTS (same as ProductList / Watches page)
+// TEMP PRODUCTS – PHASE 1
 const products: ProductsType = [
   {
     id: 1,
@@ -56,6 +58,7 @@ const products: ProductsType = [
 export default function ProductDetailsPage() {
   const params = useParams();
   const productId = params.id;
+  const { addToCart } = useCart();
 
   const product: ProductType | undefined = products.find(
     (p) => String(p.id) === productId
@@ -74,8 +77,14 @@ export default function ProductDetailsPage() {
     );
   }
 
-  const defaultColor = product.colors[0];
-  const imageSrc = product.images[defaultColor];
+  // 🔥 Color → Image logic
+  const [selectedColor, setSelectedColor] = useState<string>(
+    product.colors[0]
+  );
+
+  const imageSrc =
+    product.images[selectedColor] ??
+    product.images[product.colors[0]];
 
   return (
     <section className="max-w-7xl mx-auto px-6 md:px-12 py-20">
@@ -86,12 +95,12 @@ export default function ProductDetailsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
         {/* IMAGE */}
-        <div className="relative w-full h-130 rounded-2xl overflow-hidden border border-white/10">
+        <div className="relative w-full h-130 rounded-2xl overflow-hidden border border-white/10 bg-black">
           <Image
             src={imageSrc}
             alt={product.name}
             fill
-            className="object-cover"
+            className="object-cover transition-all duration-500"
           />
         </div>
 
@@ -115,14 +124,22 @@ export default function ProductDetailsPage() {
 
           {/* COLORS */}
           <div className="mt-8">
-            <p className="text-sm text-gray-400 mb-2">Available Colors</p>
-            <div className="flex gap-3">
+            <p className="text-sm text-gray-400 mb-3">
+              Available Colors
+            </p>
+
+            <div className="flex gap-4">
               {product.colors.map((color) => (
-                <span
+                <button
                   key={color}
-                  className="w-6 h-6 rounded-full border border-white/20"
+                  onClick={() => setSelectedColor(color)}
+                  className={`w-7 h-7 rounded-full border transition
+                    ${selectedColor === color
+                      ? "border-[#d4af37] scale-110"
+                      : "border-white/30"
+                    }`}
                   style={{ backgroundColor: color }}
-                  title={color}
+                  aria-label={color}
                 />
               ))}
             </div>
@@ -131,8 +148,15 @@ export default function ProductDetailsPage() {
           {/* ACTIONS */}
           <div className="mt-10 flex gap-4">
             <button
+              onClick={() =>
+                addToCart({
+                  product,
+                  quantity: 1,
+                  selectedColor
+                })
+              }
               className="px-8 py-3 rounded-full bg-[#d4af37]
-              text-black font-semibold hover:opacity-90 transition"
+  text-black font-semibold hover:opacity-90 transition"
             >
               Add to Cart
             </button>

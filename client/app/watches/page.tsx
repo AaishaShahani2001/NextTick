@@ -61,7 +61,7 @@ export default function WatchesPage() {
     : products;
 
   return (
-    <section className="max-w-7xl mx-auto px-6 md:px-12 py-20">
+    <section className="max-w-7xl mx-auto px-6 md:px-12 py-12">
       {/* HEADER */}
       <div className="mb-12">
         <h1 className="text-4xl font-bold">
