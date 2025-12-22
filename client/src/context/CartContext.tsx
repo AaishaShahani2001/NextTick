@@ -29,14 +29,52 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
-  const removeFromCart = (productId: string | number) => {
+  const increaseQty = (productId: string | number, color: string) => {
     setCart((prev) =>
-      prev.filter((item) => item.product.id !== productId)
+      prev.map((item) =>
+        item.product.id === productId &&
+        item.selectedColor === color
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      )
+    );
+  };
+
+  const decreaseQty = (productId: string | number, color: string) => {
+    setCart((prev) =>
+      prev
+        .map((item) =>
+          item.product.id === productId &&
+          item.selectedColor === color
+            ? { ...item, quantity: item.quantity - 1 }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  };
+
+  const removeFromCart = (productId: string | number, color: string) => {
+    setCart((prev) =>
+      prev.filter(
+        (item) =>
+          !(
+            item.product.id === productId &&
+            item.selectedColor === color
+          )
+      )
     );
   };
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart }}>
+    <CartContext.Provider
+      value={{
+        cart,
+        addToCart,
+        increaseQty,
+        decreaseQty,
+        removeFromCart
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
