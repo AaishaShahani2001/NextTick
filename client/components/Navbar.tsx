@@ -13,10 +13,9 @@ import {
 } from "lucide-react";
 import { useCart } from "@/src/context/CartContext";
 import { ProductType } from "@/src/types/product";
+import { useAuth } from "@/src/context/AuthContext";
 
-/* ---------------- TEMP PRODUCTS (SEARCH SOURCE)
-   Later replace with API call
------------------------------------------------- */
+/* ---------------- TEMP PRODUCTS (SEARCH SOURCE) ---------------- */
 const products: ProductType[] = [
   {
     id: 1,
@@ -69,9 +68,7 @@ export default function Navbar() {
   const profileRef = useRef<HTMLDivElement | null>(null);
 
   const { cart } = useCart();
-
-  // TEMP AUTH FLAG (replace later)
-  const isLoggedIn = true;
+  const { isLoggedIn, logout } = useAuth(); // ✅ FIXED
 
   const cartCount = cart.reduce(
     (total, item) => total + item.quantity,
@@ -88,7 +85,7 @@ export default function Navbar() {
             p.collection.toLowerCase().includes(query.toLowerCase())
         );
 
-  /* ---------------- EFFECTS ---------------- */
+  /* ---------------- CLICK OUTSIDE ---------------- */
   useEffect(() => {
     if (showSearch) {
       searchInputRef.current?.focus();
@@ -116,9 +113,14 @@ export default function Navbar() {
       document.removeEventListener("mousedown", handleClickOutside);
   }, [showSearch]);
 
+  /* ---------------- LOGOUT ---------------- */
+  const handleLogout = () => {
+    logout();              // ✅ FIXED
+    setShowProfile(false);
+  };
+
   return (
     <header className="fixed top-0 w-full z-50">
-      {/* ================= NAVBAR ================= */}
       <nav className="mx-auto flex items-center justify-between px-6 md:px-12 py-4
         bg-black/60 backdrop-blur-xl border-b border-white/10">
 
@@ -143,13 +145,11 @@ export default function Navbar() {
 
         {/* RIGHT ICONS */}
         <div className="hidden md:flex items-center gap-5 text-gray-300 relative">
-          {/* SEARCH ICON */}
           <Search
             onClick={() => setShowSearch((prev) => !prev)}
             className="hover:text-[#d4af37] cursor-pointer transition"
           />
 
-          {/* CART */}
           <Link href="/cart" className="relative">
             <ShoppingCart className="hover:text-[#d4af37] cursor-pointer transition" />
             {cartCount > 0 && (
@@ -160,7 +160,7 @@ export default function Navbar() {
             )}
           </Link>
 
-          {/* PROFILE */}
+          {/* AUTH SECTION */}
           {isLoggedIn ? (
             <div ref={profileRef} className="relative">
               <User
@@ -186,7 +186,7 @@ export default function Navbar() {
                   </Link>
 
                   <button
-                    onClick={() => alert("Logged out (demo)")}
+                    onClick={handleLogout}
                     className="flex w-full items-center gap-3 px-4 py-3
                     text-sm text-red-400 hover:bg-white/5">
                     <LogOut size={16} /> Logout
@@ -204,63 +204,10 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* MOBILE MENU BUTTON */}
         <button onClick={() => setOpen(!open)} className="md:hidden text-white">
           {open ? <X size={28} /> : <Menu size={28} />}
         </button>
       </nav>
-
-      {/* ================= SEARCH PANEL ================= */}
-      {showSearch && (
-        <div
-          ref={searchRef}
-          className="absolute top-full left-0 w-full bg-black/95
-          backdrop-blur-xl border-b border-white/10 z-40"
-        >
-          <div className="max-w-7xl mx-auto px-6 md:px-12 py-6">
-            <input
-              ref={searchInputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search watches or collections..."
-              className="w-full p-4 rounded-xl bg-black border border-white/10
-              text-white placeholder-gray-500 focus:outline-none
-              focus:border-[#d4af37]"
-            />
-
-            {/* RESULTS */}
-            {filteredProducts.length > 0 && (
-              <div className="mt-4 bg-black border border-white/10 rounded-xl overflow-hidden">
-                {filteredProducts.map((product) => (
-                  <Link
-                    key={product.id}
-                    href={`/watches/${product.id}`}
-                    onClick={() => {
-                      setShowSearch(false);
-                      setQuery("");
-                    }}
-                    className="block px-4 py-3 text-gray-300
-                    hover:bg-white/5"
-                  >
-                    <p className="font-medium text-white">
-                      {product.name}
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      {product.collection}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {query && filteredProducts.length === 0 && (
-              <p className="mt-4 text-sm text-gray-400">
-                No watches found.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
     </header>
   );
 }

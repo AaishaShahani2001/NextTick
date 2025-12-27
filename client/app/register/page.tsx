@@ -3,9 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/src/context/AuthContext";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { login } = useAuth();
 
   const [form, setForm] = useState({
     name: "",
@@ -13,78 +15,41 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: ""
   });
-
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
   const handleRegister = async () => {
-    setError("");
-
-    if (
-      !form.name ||
-      !form.email ||
-      !form.password ||
-      !form.confirmPassword
-    ) {
-      setError("Please fill all fields");
-      return;
-    }
-
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match");
       return;
     }
 
-    try {
-      setLoading(true);
-
-      const res = await fetch(
-        "http://localhost:3000/api/auth/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            name: form.name,
-            email: form.email,
-            password: form.password
-          })
-        }
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Registration failed");
-        setLoading(false);
-        return;
-      }
-
-      //  Save JWT token
-      localStorage.setItem("token", data.token);
-
-      // Optional: save user info
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          id: data._id,
-          name: data.name,
-          email: data.email
+    const res = await fetch(
+      "http://localhost:3000/api/auth/register",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          password: form.password
         })
-      );
+      }
+    );
 
-      //  Redirect to home (or profile)
-      router.push("/");
-    } catch (err) {
-      setError("Something went wrong. Try again.");
-    } finally {
-      setLoading(false);
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.message || "Registration failed");
+      return;
     }
+
+    login(data.token, {
+      id: data._id,
+      name: data.name,
+      email: data.email
+    });
+
+    router.push("/");
   };
 
   return (
@@ -94,70 +59,53 @@ export default function RegisterPage() {
           Register
         </h1>
 
-        <div className="space-y-5">
-          <input
-            name="name"
-            placeholder="Full Name"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full p-4 rounded-xl bg-black border border-white/10
-            text-white placeholder-gray-500 focus:outline-none
-            focus:border-[#d4af37]"
-          />
+        <input
+          placeholder="Full Name"
+          className="w-full p-4 mb-4 rounded-xl bg-black border border-white/10"
+          onChange={(e) =>
+            setForm({ ...form, name: e.target.value })
+          }
+        />
 
-          <input
-            name="email"
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-            className="w-full p-4 rounded-xl bg-black border border-white/10
-            text-white placeholder-gray-500 focus:outline-none
-            focus:border-[#d4af37]"
-          />
+        <input
+          placeholder="Email"
+          className="w-full p-4 mb-4 rounded-xl bg-black border border-white/10"
+          onChange={(e) =>
+            setForm({ ...form, email: e.target.value })
+          }
+        />
 
-          <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            className="w-full p-4 rounded-xl bg-black border border-white/10
-            text-white placeholder-gray-500 focus:outline-none
-            focus:border-[#d4af37]"
-          />
+        <input
+          type="password"
+          placeholder="Password"
+          className="w-full p-4 mb-4 rounded-xl bg-black border border-white/10"
+          onChange={(e) =>
+            setForm({ ...form, password: e.target.value })
+          }
+        />
 
-          <input
-            name="confirmPassword"
-            type="password"
-            placeholder="Confirm Password"
-            value={form.confirmPassword}
-            onChange={handleChange}
-            className="w-full p-4 rounded-xl bg-black border border-white/10
-            text-white placeholder-gray-500 focus:outline-none
-            focus:border-[#d4af37]"
-          />
+        <input
+          type="password"
+          placeholder="Confirm Password"
+          className="w-full p-4 mb-4 rounded-xl bg-black border border-white/10"
+          onChange={(e) =>
+            setForm({
+              ...form,
+              confirmPassword: e.target.value
+            })
+          }
+        />
 
-          {/* ERROR MESSAGE */}
-          {error && (
-            <p className="text-sm text-red-400 text-center">
-              {error}
-            </p>
-          )}
+        {error && (
+          <p className="text-red-400 text-sm mb-3">{error}</p>
+        )}
 
-          <button
-            onClick={handleRegister}
-            disabled={loading}
-            className={`w-full py-3 rounded-full font-semibold transition
-              ${
-                loading
-                  ? "bg-gray-600 cursor-not-allowed"
-                  : "bg-[#d4af37] text-black hover:opacity-90"
-              }`}
-          >
-            {loading ? "Creating account..." : "Create Account"}
-          </button>
-        </div>
+        <button
+          onClick={handleRegister}
+          className="w-full py-3 rounded-full bg-[#d4af37] text-black"
+        >
+          Create Account
+        </button>
 
         <p className="mt-6 text-sm text-gray-400 text-center">
           Already have an account?{" "}

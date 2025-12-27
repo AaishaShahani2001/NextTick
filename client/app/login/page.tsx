@@ -3,72 +3,47 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/src/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
 
   const [form, setForm] = useState({
     email: "",
     password: ""
   });
-
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     setError("");
+    setLoading(true);
 
-    if (!form.email || !form.password) {
-      setError("Please fill all fields");
+    const res = await fetch(
+      "http://localhost:3000/api/auth/login",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.message || "Login failed");
+      setLoading(false);
       return;
     }
 
-    try {
-      setLoading(true);
+    login(data.token, {
+      id: data._id,
+      name: data.name,
+      email: data.email
+    });
 
-      const res = await fetch(
-        "http://localhost:3000/api/auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(form)
-        }
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Login failed");
-        setLoading(false);
-        return;
-      }
-
-      //  Save JWT token
-      localStorage.setItem("token", data.token);
-
-      // Optional: save user info
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          id: data._id,
-          name: data.name,
-          email: data.email
-        })
-      );
-
-      // ✅ Redirect after login
-      router.push("/");
-    } catch (err) {
-      setError("Something went wrong. Try again.");
-    } finally {
-      setLoading(false);
-    }
+    router.push("/");
   };
 
   return (
@@ -78,49 +53,34 @@ export default function LoginPage() {
           Login
         </h1>
 
-        <div className="space-y-5">
-          <input
-            name="email"
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-            className="w-full p-4 rounded-xl bg-black border border-white/10
-            text-white placeholder-gray-500 focus:outline-none
-            focus:border-[#d4af37]"
-          />
+        <input
+          placeholder="Email"
+          className="w-full p-4 mb-4 rounded-xl bg-black border border-white/10"
+          onChange={(e) =>
+            setForm({ ...form, email: e.target.value })
+          }
+        />
 
-          <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            className="w-full p-4 rounded-xl bg-black border border-white/10
-            text-white placeholder-gray-500 focus:outline-none
-            focus:border-[#d4af37]"
-          />
+        <input
+          type="password"
+          placeholder="Password"
+          className="w-full p-4 mb-4 rounded-xl bg-black border border-white/10"
+          onChange={(e) =>
+            setForm({ ...form, password: e.target.value })
+          }
+        />
 
-          {/* ERROR MESSAGE */}
-          {error && (
-            <p className="text-sm text-red-400 text-center">
-              {error}
-            </p>
-          )}
+        {error && (
+          <p className="text-red-400 text-sm mb-3">{error}</p>
+        )}
 
-          <button
-            onClick={handleLogin}
-            disabled={loading}
-            className={`w-full py-3 rounded-full font-semibold transition
-              ${
-                loading
-                  ? "bg-gray-600 cursor-not-allowed"
-                  : "bg-[#d4af37] text-black hover:opacity-90"
-              }`}
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </div>
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          className="w-full py-3 rounded-full bg-[#d4af37] text-black"
+        >
+          {loading ? "Logging in..." : "Login"}
+        </button>
 
         <p className="mt-6 text-sm text-gray-400 text-center">
           Don’t have an account?{" "}
