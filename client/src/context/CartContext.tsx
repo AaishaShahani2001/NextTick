@@ -8,6 +8,11 @@ const CartContext = createContext<CartContextType | null>(null);
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
 
+  const clearCart = () => {
+    setCart([]);
+  };
+
+
   const addToCart = (item: CartItem) => {
     setCart((prev) => {
       const existing = prev.find(
@@ -19,7 +24,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       if (existing) {
         return prev.map((c) =>
           c.product.id === item.product.id &&
-          c.selectedColor === item.selectedColor
+            c.selectedColor === item.selectedColor
             ? { ...c, quantity: c.quantity + 1 }
             : c
         );
@@ -33,7 +38,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     setCart((prev) =>
       prev.map((item) =>
         item.product.id === productId &&
-        item.selectedColor === color
+          item.selectedColor === color
           ? { ...item, quantity: item.quantity + 1 }
           : item
       )
@@ -45,7 +50,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       prev
         .map((item) =>
           item.product.id === productId &&
-          item.selectedColor === color
+            item.selectedColor === color
             ? { ...item, quantity: item.quantity - 1 }
             : item
         )
@@ -72,7 +77,8 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         addToCart,
         increaseQty,
         decreaseQty,
-        removeFromCart
+        removeFromCart,
+        clearCart
       }}
     >
       {children}

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/src/context/CartContext";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart } = useCart();
+  const { cart, clearCart } = useCart();
 
   const [form, setForm] = useState({
     name: "",
@@ -20,6 +20,13 @@ export default function CheckoutPage() {
     0
   );
 
+  // ✅ REDIRECT SAFELY IF CART IS EMPTY
+  useEffect(() => {
+    if (cart.length === 0) {
+      router.push("/cart");
+    }
+  }, [cart, router]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -30,22 +37,21 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Demo order (later send to backend)
     const order = {
       customer: form,
       items: cart,
-      total: subtotal
+      total: subtotal,
+      placedAt: new Date()
     };
 
     console.log("ORDER PLACED:", order);
 
+    // ✅ Clear cart first
+    clearCart();
+
+    // ✅ Then redirect
     router.push("/order-success");
   };
-
-  if (cart.length === 0) {
-    router.push("/cart");
-    return null;
-  }
 
   return (
     <section className="max-w-7xl mx-auto px-6 md:px-12 py-20">
