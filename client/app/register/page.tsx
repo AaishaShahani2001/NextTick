@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
+  const router = useRouter();
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -11,33 +14,81 @@ export default function RegisterPage() {
     confirmPassword: ""
   });
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
+    setError("");
+
     if (
       !form.name ||
       !form.email ||
       !form.password ||
       !form.confirmPassword
     ) {
-      alert("Please fill all fields");
+      setError("Please fill all fields");
       return;
     }
 
     if (form.password !== form.confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
 
-    // TEMP register logic (later backend)
-    console.log("REGISTER DATA:", form);
-    alert("Account created successfully (demo)");
+    try {
+      setLoading(true);
+
+      const res = await fetch(
+        "http://localhost:3000/api/auth/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name: form.name,
+            email: form.email,
+            password: form.password
+          })
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Registration failed");
+        setLoading(false);
+        return;
+      }
+
+      //  Save JWT token
+      localStorage.setItem("token", data.token);
+
+      // Optional: save user info
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: data._id,
+          name: data.name,
+          email: data.email
+        })
+      );
+
+      //  Redirect to home (or profile)
+      router.push("/");
+    } catch (err) {
+      setError("Something went wrong. Try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <section className="min-h-screen flex items-center justify-center px-6">
+    <section className="w-full flex items-center justify-center px-6 py-32">
       <div className="w-full max-w-md bg-black border border-white/10 rounded-2xl p-8">
         <h1 className="text-3xl font-bold text-white mb-6 text-center">
           Register
@@ -87,12 +138,24 @@ export default function RegisterPage() {
             focus:border-[#d4af37]"
           />
 
+          {/* ERROR MESSAGE */}
+          {error && (
+            <p className="text-sm text-red-400 text-center">
+              {error}
+            </p>
+          )}
+
           <button
             onClick={handleRegister}
-            className="w-full py-3 rounded-full bg-[#d4af37]
-            text-black font-semibold hover:opacity-90 transition"
+            disabled={loading}
+            className={`w-full py-3 rounded-full font-semibold transition
+              ${
+                loading
+                  ? "bg-gray-600 cursor-not-allowed"
+                  : "bg-[#d4af37] text-black hover:opacity-90"
+              }`}
           >
-            Create Account
+            {loading ? "Creating account..." : "Create Account"}
           </button>
         </div>
 
