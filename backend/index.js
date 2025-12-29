@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -15,5 +16,6 @@ mongoose
   .then(() => console.log("MongoDB Connected"));
 
 app.use("/api/auth", authRoutes);
+app.use("/api", userRoutes);
 
 app.listen(3000, () => console.log("Server running on port 3000"));

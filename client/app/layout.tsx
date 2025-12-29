@@ -4,6 +4,8 @@ import { AuthProvider } from "@/src/context/AuthContext";
 import "./globals.css";
 import Footer from "@/components/Footer";
 
+import { Toaster } from "react-hot-toast";
+
 export default function RootLayout({
   children,
 }: {
@@ -18,6 +20,16 @@ export default function RootLayout({
           <main className="pt-24">
             {children}
           </main>
+          <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: "#000",
+              color: "#fff",
+              border: "1px solid rgba(255,255,255,0.1)"
+            }
+          }}
+        />
           <Footer />
         </CartProvider>
         </AuthProvider>

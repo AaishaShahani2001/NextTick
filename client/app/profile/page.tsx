@@ -1,13 +1,73 @@
 "use client";
 
-import { User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { User as UserIcon } from "lucide-react";
+import { useAuth } from "@/src/context/AuthContext";
+import toast from "react-hot-toast";
 
 export default function ProfilePage() {
-  // TEMP USER DATA (replace with auth context later)
-  const user = {
-    name: "ChronoLux Customer",
-    email: "customer@chronolux.com",
-    phone: "+94 77 123 4567"
+  const router = useRouter();
+  const { isLoggedIn, user, setUser } = useAuth();
+
+  const [form, setForm] = useState({
+    name: "",
+    phone: ""
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  // 🔒 Protect route + load data
+  useEffect(() => {
+    if (!isLoggedIn) {
+      router.replace("/login");
+      return;
+    }
+
+    if (user) {
+      setForm({
+        name: user.name ?? "",
+        phone: user.phone ?? ""
+      });
+    }
+  }, [isLoggedIn, user, router]);
+
+  if (!isLoggedIn || !user) return null;
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleUpdate = async () => {
+    setLoading(true);
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch("http://localhost:3000/api/me", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(form)
+    });
+
+    const data = await res.json();
+
+    setLoading(false);
+
+    if (!res.ok) {
+      toast.error(data.message || "Update failed");
+      return;
+    }
+
+    // 🔥 Update AuthContext instantly
+    setUser(data);
+
+   toast.success("Profile updated successfully");
   };
 
   return (
@@ -17,39 +77,49 @@ export default function ProfilePage() {
       </h1>
 
       <div className="bg-black border border-white/10 rounded-2xl p-8">
+        {/* HEADER */}
         <div className="flex items-center gap-4 mb-8">
-          <div className="w-14 h-14 rounded-full bg-[#d4af37] flex items-center justify-center">
-            <User className="text-black" size={28} />
+          <div className="w-14 h-14 rounded-full bg-[#d4af37]
+            flex items-center justify-center">
+            <UserIcon className="text-black" size={28} />
           </div>
 
           <div>
             <h2 className="text-xl font-semibold text-white">
-              {user.name}
-            </h2>
-            <p className="text-gray-400 text-sm">
               {user.email}
-            </p>
+            </h2>
           </div>
         </div>
 
-        <div className="space-y-4 text-gray-300">
-          <p>
-            <span className="text-gray-400">Email:</span>{" "}
-            {user.email}
-          </p>
+        {/* NAME */}
+        <input
+          name="name"
+          value={form.name}
+          onChange={handleChange}
+          placeholder="Full Name"
+          className="w-full p-4 mb-4 rounded-xl bg-black
+          border border-white/10 text-white
+          focus:outline-none focus:border-[#d4af37]"
+        />
 
-          <p>
-            <span className="text-gray-400">Phone:</span>{" "}
-            {user.phone}
-          </p>
-        </div>
+        {/* PHONE */}
+        <input
+          name="phone"
+          value={form.phone}
+          onChange={handleChange}
+          placeholder="Phone Number"
+          className="w-full p-4 mb-6 rounded-xl bg-black
+          border border-white/10 text-white
+          focus:outline-none focus:border-[#d4af37]"
+        />
 
         <button
-          className="mt-8 px-6 py-3 rounded-full border border-[#d4af37]
-          text-[#d4af37] hover:bg-[#d4af37]
-          hover:text-black transition"
+          onClick={handleUpdate}
+          disabled={loading}
+          className="px-8 py-3 rounded-full bg-[#d4af37]
+          text-black font-semibold hover:opacity-90 transition"
         >
-          Edit Profile (Coming Soon)
+          {loading ? "Updating..." : "Update Profile"}
         </button>
       </div>
     </section>

@@ -2,9 +2,18 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+};
+
 type AuthContextType = {
   isLoggedIn: boolean;
-  login: (token: string, user?: any) => void;
+  user: User | null;
+  setUser: (user: User) => void;
+  loginWithToken: (token: string) => void;
   logout: () => void;
 };
 
@@ -16,30 +25,57 @@ export const AuthProvider = ({
   children: React.ReactNode;
 }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
-  // Check token on first load
-  useEffect(() => {
+  /* ================= FETCH LOGGED-IN USER ================= */
+  const fetchMe = async () => {
     const token = localStorage.getItem("token");
-    setIsLoggedIn(!!token);
-  }, []);
+    if (!token) return;
 
-  const login = (token: string, user?: any) => {
-    localStorage.setItem("token", token);
-    if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
+    try {
+      const res = await fetch("http://localhost:3000/api/me", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) throw new Error("Unauthorized");
+
+      const data = await res.json();
+      setUser(data);
+      setIsLoggedIn(true);
+    } catch {
+      logout();
     }
-    setIsLoggedIn(true); // instant update
   };
 
+  /* ================= ON APP LOAD ================= */
+  useEffect(() => {
+    fetchMe();
+  }, []);
+
+  /* ================= LOGIN ================= */
+  const loginWithToken = (token: string) => {
+    localStorage.setItem("token", token);
+    fetchMe(); // 🔥 fetch /api/me immediately
+  };
+
+  /* ================= LOGOUT ================= */
   const logout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    setUser(null);
     setIsLoggedIn(false);
   };
 
   return (
     <AuthContext.Provider
-      value={{ isLoggedIn, login, logout }}
+      value={{
+        isLoggedIn,
+        user,
+        setUser,
+        loginWithToken,
+        logout
+      }}
     >
       {children}
     </AuthContext.Provider>
