@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/src/context/CartContext";
+import toast from "react-hot-toast";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -15,12 +16,14 @@ export default function CheckoutPage() {
     phone: ""
   });
 
+  const [loading, setLoading] = useState(false);
+
   const subtotal = cart.reduce(
     (total, item) => total + item.product.price * item.quantity,
     0
   );
 
-  // ✅ REDIRECT SAFELY IF CART IS EMPTY
+  // 🔒 Redirect if cart empty
   useEffect(() => {
     if (cart.length === 0) {
       router.push("/cart");
@@ -31,26 +34,56 @@ export default function CheckoutPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!form.name || !form.email || !form.address || !form.phone) {
-      alert("Please fill all fields");
+      toast.error("Please fill all fields");
       return;
     }
 
-    const order = {
-      customer: form,
-      items: cart,
-      total: subtotal,
-      placedAt: new Date()
-    };
+    setLoading(true);
 
-    console.log("ORDER PLACED:", order);
+    try {
+      const token = localStorage.getItem("token");
 
-    // ✅ Clear cart first
-    clearCart();
+      const res = await fetch("http://localhost:3000/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          items: cart.map((item) => ({
+            productId: item.product.id,
+            name: item.product.name,
+            price: item.product.price,
+            quantity: item.quantity,
+            color: item.selectedColor,
+            image:
+              item.product.images[item.selectedColor] ??
+              item.product.images[item.product.colors[0]]
+          })),
+          shippingAddress: form,
+          totalAmount: subtotal
+        })
+      });
 
-    // ✅ Then redirect
-    router.push("/order-success");
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Order failed");
+      }
+
+      // ✅ Clear cart only after success
+      clearCart();
+
+      toast.success("Order placed successfully 🎉");
+
+      router.push("/order-success");
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -109,10 +142,11 @@ export default function CheckoutPage() {
 
           <button
             onClick={handlePlaceOrder}
+            disabled={loading}
             className="mt-8 w-full py-3 rounded-full bg-[#d4af37]
             text-black font-semibold hover:opacity-90 transition"
           >
-            Place Order
+            {loading ? "Placing Order..." : "Place Order"}
           </button>
         </div>
       </div>
