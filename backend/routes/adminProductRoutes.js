@@ -1,41 +1,22 @@
 import express from "express";
+import {
+  createProduct,
+  getProducts,
+  getProductById,
+  updateProduct,
+  deleteProduct
+} from "../controllers/adminProductController.js";
+import authMiddleware from "../middleware/authMiddleware.js";
 import adminMiddleware from "../middleware/adminMiddleware.js";
-import Product from "../models/Product.js";
 
 const router = express.Router();
 
-/* ================= ADD PRODUCT ================= */
-router.post("/", adminMiddleware, async (req, res) => {
-  try {
-    const product = await Product.create(req.body);
-    res.status(201).json(product);
-  } catch {
-    res.status(500).json({ message: "Product creation failed" });
-  }
-});
+router.use(authMiddleware, adminMiddleware);
 
-/* ================= UPDATE PRODUCT ================= */
-router.put("/:id", adminMiddleware, async (req, res) => {
-  try {
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    res.json(product);
-  } catch {
-    res.status(500).json({ message: "Product update failed" });
-  }
-});
-
-/* ================= DELETE PRODUCT ================= */
-router.delete("/:id", adminMiddleware, async (req, res) => {
-  try {
-    await Product.findByIdAndDelete(req.params.id);
-    res.json({ message: "Product deleted" });
-  } catch {
-    res.status(500).json({ message: "Product deletion failed" });
-  }
-});
+router.post("/", createProduct);
+router.get("/", getProducts);
+router.get("/:id", getProductById);
+router.put("/:id", updateProduct);
+router.delete("/:id", deleteProduct);
 
 export default router;
