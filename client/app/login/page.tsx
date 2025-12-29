@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginWithToken } = useAuth();
+  const { loginWithToken, user } = useAuth();
 
   const [form, setForm] = useState({
     email: "",
@@ -21,26 +21,39 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const res = await fetch(
-      "http://localhost:3000/api/auth/login",
-      {
+    try {
+      const res = await fetch("http://localhost:3000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Login failed");
+        return;
       }
-    );
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.message || "Login failed");
+      // ✅ Wait until /api/me is fetched
+      await loginWithToken(data.token);
+    } catch {
+      setError("Something went wrong");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    loginWithToken(data.token); //  login context update
-    router.push("/");
   };
+
+  /* 🔥 REDIRECT AFTER USER IS AVAILABLE */
+  useEffect(() => {
+    if (!user) return;
+
+    if (user.role === "admin") {
+      router.replace("/admin");
+    } else {
+      router.replace("/");
+    }
+  }, [user, router]);
 
   return (
     <section className="w-full flex items-center justify-center px-6 py-32">
@@ -50,8 +63,8 @@ export default function LoginPage() {
         </h1>
 
         <input
-          placeholder="Email"
           type="email"
+          placeholder="Email"
           value={form.email}
           onChange={(e) =>
             setForm({ ...form, email: e.target.value })
@@ -74,9 +87,7 @@ export default function LoginPage() {
         />
 
         {error && (
-          <p className="text-red-400 text-sm mb-3">
-            {error}
-          </p>
+          <p className="text-red-400 text-sm mb-3">{error}</p>
         )}
 
         <button

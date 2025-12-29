@@ -5,8 +5,15 @@ import User from "../models/User.js";
 const router = express.Router();
 
 /* ================= GET LOGGED-IN USER ================= */
-router.get("/me", authMiddleware, (req, res) => {
-  res.json(req.user);
+router.get("/me", authMiddleware, async (req, res) => {
+  //console.log("AUTH USER:", req.user);
+  res.json({
+    id: req.user._id,
+    name: req.user.name,
+    email: req.user.email,
+    phone: req.user.phone,
+    role: req.user.role 
+  });
 });
 
 /* ================= UPDATE PROFILE ================= */
