@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Edit, Trash2 } from "lucide-react";
-import toast from "react-hot-toast";
+import image from "next/image";
 
 type Product = {
   _id: string;
@@ -10,6 +10,7 @@ type Product = {
   price: number;
   category: string;
   collection: string;
+  image?: string;
 };
 
 export default function ProductTable({
@@ -24,6 +25,7 @@ export default function ProductTable({
       <table className="w-full">
         <thead className="bg-white/5 text-gray-400 text-sm">
           <tr>
+            <th className="text-left px-6 py-4">Image</th>
             <th className="text-left px-6 py-4">Product</th>
             <th className="text-left px-6 py-4">Category</th>
             <th className="text-left px-6 py-4">Collection</th>
@@ -38,6 +40,21 @@ export default function ProductTable({
               key={product._id}
               className="border-t border-white/10 hover:bg-white/5"
             >
+              {/* IMAGE */}
+              <td className="px-6 py-4">
+                {product.image ? (
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-12 h-12 rounded-lg object-cover border border-white/10"
+                  />
+                ) : (
+                  <span className="text-gray-500 text-sm">
+                    No image
+                  </span>
+                )}
+              </td>
+
               <td className="px-6 py-4 text-white font-medium">
                 {product.name}
               </td>
@@ -71,7 +88,6 @@ export default function ProductTable({
                         )
                       ) {
                         onDelete(product._id);
-                        toast.success("Product deleted");
                       }
                     }}
                     className="text-red-400 hover:text-red-500"
@@ -86,7 +102,7 @@ export default function ProductTable({
           {products.length === 0 && (
             <tr>
               <td
-                colSpan={5}
+                colSpan={6}
                 className="text-center py-10 text-gray-400"
               >
                 No products found
