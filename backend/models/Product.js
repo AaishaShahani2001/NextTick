@@ -8,9 +8,9 @@ const productSchema = new mongoose.Schema(
     category: String,
     collection: String,
     colors: [String],
-    images: {
-      type: Map,
-      of: String
+    image: {
+      type: String,
+      required: true
     },
     isFeatured: { type: Boolean, default: false }
   },
