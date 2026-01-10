@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginWithToken, user } = useAuth();
+  const { loginWithToken } = useAuth();
 
   const [form, setForm] = useState({
     email: "",
@@ -35,25 +36,37 @@ export default function LoginPage() {
         return;
       }
 
-      // ✅ Wait until /api/me is fetched
+      // ✅ 1) Save token + update AuthContext
       await loginWithToken(data.token);
+
+      // ✅ 2) Immediately confirm role (no state timing issues)
+      const meRes = await fetch("http://localhost:3000/api/me", {
+        headers: {
+          Authorization: `Bearer ${data.token}`
+        }
+      });
+
+      if (!meRes.ok) {
+        setError("Failed to load user profile");
+        return;
+      }
+
+      const me = await meRes.json();
+
+      toast.success("Logged in successfully");
+
+      // ✅ 3) Redirect based on role
+      if (me.role === "admin") {
+        router.replace("/admin");
+      } else {
+        router.replace("/");
+      }
     } catch {
       setError("Something went wrong");
     } finally {
       setLoading(false);
     }
   };
-
-  /* 🔥 REDIRECT AFTER USER IS AVAILABLE */
-  useEffect(() => {
-    if (!user) return;
-
-    if (user.role === "admin") {
-      router.replace("/admin");
-    } else {
-      router.replace("/");
-    }
-  }, [user, router]);
 
   return (
     <section className="w-full flex items-center justify-center px-6 py-32">
@@ -66,9 +79,7 @@ export default function LoginPage() {
           type="email"
           placeholder="Email"
           value={form.email}
-          onChange={(e) =>
-            setForm({ ...form, email: e.target.value })
-          }
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
           className="w-full p-4 mb-4 rounded-xl bg-black border border-white/10
           text-white placeholder-gray-500 focus:outline-none
           focus:border-[#d4af37]"
@@ -78,9 +89,7 @@ export default function LoginPage() {
           type="password"
           placeholder="Password"
           value={form.password}
-          onChange={(e) =>
-            setForm({ ...form, password: e.target.value })
-          }
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
           className="w-full p-4 mb-4 rounded-xl bg-black border border-white/10
           text-white placeholder-gray-500 focus:outline-none
           focus:border-[#d4af37]"
@@ -94,7 +103,7 @@ export default function LoginPage() {
           onClick={handleLogin}
           disabled={loading}
           className="w-full py-3 rounded-full bg-[#d4af37]
-          text-black font-semibold hover:opacity-90 transition"
+          text-black font-semibold hover:opacity-90 transition disabled:opacity-60"
         >
           {loading ? "Logging in..." : "Login"}
         </button>

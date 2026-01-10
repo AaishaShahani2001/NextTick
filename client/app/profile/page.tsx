@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { isLoggedIn, user, setUser } = useAuth();
+  const { isLoggedIn, user, updateUser  } = useAuth();
 
   const [form, setForm] = useState({
     name: "",
@@ -64,8 +64,13 @@ export default function ProfilePage() {
       return;
     }
 
-    // 🔥 Update AuthContext instantly
-    setUser(data);
+  
+  updateUser({
+  id: data.id,
+  name: data.name,
+  email: data.email,
+  phone: data.phone
+});
 
    toast.success("Profile updated successfully");
   };
