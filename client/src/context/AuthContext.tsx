@@ -16,6 +16,7 @@ type AuthContextType = {
   loading: boolean;
   loginWithToken: (token: string) => Promise<void>;
   logout: () => void;
+  updateUser: (data: Partial<User>) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +35,8 @@ export const AuthProvider = ({
     const token = localStorage.getItem("token");
     if (!token) {
       setLoading(false);
+      setUser(null);
+      setIsLoggedIn(false);
       return;
     }
 
@@ -50,9 +53,12 @@ export const AuthProvider = ({
       setUser(data);
       setIsLoggedIn(true);
     } catch {
+      localStorage.removeItem("token");
       logout();
+      setIsLoggedIn(false);
     } finally {
       setLoading(false);
+
     }
   };
 
@@ -64,7 +70,7 @@ export const AuthProvider = ({
   /* ================= LOGIN ================= */
   const loginWithToken = async (token: string) => {
     localStorage.setItem("token", token);
-    await fetchMe(); // 🔥 instant user + role update
+    await fetchMe(); // instant user + role update
   };
 
   /* ================= LOGOUT ================= */
@@ -78,6 +84,11 @@ export const AuthProvider = ({
   //   return null; // or spinner if you want
   // }
 
+  //update user instantly (after PUT /me)
+  const updateUser = (data: Partial<User>) => {
+    setUser((prev) => (prev ? { ...prev, ...data } : prev));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -85,7 +96,8 @@ export const AuthProvider = ({
         user,
         loading,
         loginWithToken,
-        logout
+        logout,
+        updateUser
       }}
     >
       {children}
