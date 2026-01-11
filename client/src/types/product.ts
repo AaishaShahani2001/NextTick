@@ -1,20 +1,21 @@
-export type ProductType = {
-  id: number | string;
 
-  name: string;
-  shortDescription: string;
-
-  price: number;
-  currency?: string;
-
-  category: string;
-  collection: string;
-
-  colors: string[];
-
-  images: Record<string, string>;
-
-  isFeatured?: boolean;
+export type ProductVariant = {
+  sku: string;
+  strapType: string;
+  color: string;
+  sizeMM: number;
+  stock: number;
+  priceAdjustment: number;
 };
 
-export type ProductsType = ProductType[]
+export type Product = {
+  _id: string;
+  name: string;
+  basePrice: number;
+  category: string;
+  collection: string;
+  shortDescription: string;
+  description: string;
+  images?: string[];
+  variants: ProductVariant[];
+};

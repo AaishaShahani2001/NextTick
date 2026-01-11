@@ -7,3 +7,17 @@ html, body {
   overflow-x: hidden;
 }
 
+.lux-input {
+  @apply w-full p-3 rounded-xl bg-black border border-white/10 text-white focus:outline-none focus:border-[#d4af37];
+}
+
+.lux-textarea {
+  @apply w-full p-3 rounded-xl bg-black border border-white/10 text-white h-28 resize-none focus:outline-none focus:border-[#d4af37];
+}
+
+.lux-input:focus,
+.lux-textarea:focus {
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.4);
+}
+
+
