@@ -18,10 +18,10 @@ router.use(authMiddleware, adminMiddleware);
 
 /* ================= PRODUCTS ================= */
 
-// CREATE product (WITH IMAGE)
+// CREATE product (MULTIPLE IMAGES)
 router.post(
   "/",
-  upload.single("image"), 
+  upload.array("images", 5), // max 5 images
   createProduct
 );
 
@@ -31,10 +31,10 @@ router.get("/", getProducts);
 // GET single product
 router.get("/:id", getProductById);
 
-// UPDATE product (image optional)
+// UPDATE product (images optional)
 router.put(
   "/:id",
-  upload.single("image"), // REQUIRED
+  upload.array("images", 5),
   updateProduct
 );
 

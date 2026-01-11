@@ -1,33 +1,79 @@
 import Product from "../models/Product.js";
 import cloudinary from "../utils/cloudinary.js";
+import slugify from "slugify";
 
 /* ================= CREATE PRODUCT ================= */
 export const createProduct = async (req, res) => {
   try {
-    const {  name, price, category, collection } = req.body;
-
-    /* -------- VALIDATION -------- */
-    if (!name || !price || !category || !collection) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({ message: "Product image is required" });
-    }
-
-    /* -------- CLOUDINARY UPLOAD -------- */
-    const uploadResult = await cloudinary.uploader.upload(
-      `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
-      { folder: "chronolux/products" }
-    );
-
-    /* -------- CREATE PRODUCT -------- */
-    const product = await Product.create({
+    const {
       name,
-      price,
+      basePrice,
       category,
       collection,
-      image: uploadResult.secure_url
+      variants,
+      shortDescription,
+      description,
+      isFeatured
+    } = req.body;
+
+    /* ---------- BASIC VALIDATION ---------- */
+    if (!name || !basePrice || !category || !variants) {
+      return res.status(400).json({ message: "Required fields missing" });
+    }
+
+    const parsedVariants = JSON.parse(variants);
+
+    if (!Array.isArray(parsedVariants) || parsedVariants.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "At least one variant is required" });
+    }
+
+    /* ---------- VARIANT VALIDATION ---------- */
+    for (const v of parsedVariants) {
+      if (
+        !v.sku ||
+        !v.strapType ||
+        !v.color ||
+        !v.sizeMM ||
+        v.stock == null
+      ) {
+        return res.status(400).json({
+          message:
+            "Each variant must include sku, strapType, color, sizeMM and stock"
+        });
+      }
+    }
+
+    /* ---------- IMAGE VALIDATION ---------- */
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "Product images are required" });
+    }
+
+    /* ---------- CLOUDINARY UPLOAD ---------- */
+    const imageUrls = [];
+
+    for (const file of req.files) {
+      const uploadResult = await cloudinary.uploader.upload(
+        `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
+        { folder: "chronolux/products" }
+      );
+      imageUrls.push(uploadResult.secure_url);
+    }
+
+    /* ---------- CREATE PRODUCT ---------- */
+    const product = await Product.create({
+      name,
+      slug: slugify(name, { lower: true }),
+      shortDescription,
+      description,
+      basePrice,
+      category,
+      collection,
+      variants: parsedVariants,
+      images: imageUrls,
+      isFeatured: isFeatured ?? false,
+      status: "active"
     });
 
     res.status(201).json(product);
@@ -63,28 +109,73 @@ export const getProductById = async (req, res) => {
 /* ================= UPDATE PRODUCT ================= */
 export const updateProduct = async (req, res) => {
   try {
-    const { name, price, category, collection } = req.body;
-
     const product = await Product.findById(req.params.id);
     if (!product)
       return res.status(404).json({ message: "Product not found" });
 
-    /* -------- IMAGE UPDATE (OPTIONAL) -------- */
-    let imageUrl = product.image;
+    const {
+      name,
+      basePrice,
+      category,
+      collection,
+      variants,
+      shortDescription,
+      description,
+      isFeatured,
+      status
+    } = req.body;
 
-    if (req.file) {
-      const uploadResult = await cloudinary.uploader.upload(
-        `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
-        { folder: "chronolux/products" }
-      );
-      imageUrl = uploadResult.secure_url;
+    /* ---------- UPDATE VARIANTS ---------- */
+    if (variants) {
+      const parsedVariants = JSON.parse(variants);
+
+      for (const v of parsedVariants) {
+        if (
+          !v.sku ||
+          !v.strapType ||
+          !v.color ||
+          !v.sizeMM ||
+          v.stock == null
+        ) {
+          return res.status(400).json({
+            message:
+              "Each variant must include sku, strapType, color, sizeMM and stock"
+          });
+        }
+      }
+
+      product.variants = parsedVariants;
     }
 
-    product.name = name || product.name;
-    product.price = price || product.price;
-    product.category = category || product.category;
-    product.collection = collection || product.collection;
-    product.image = imageUrl;
+    /* ---------- IMAGE UPDATE (OPTIONAL) ---------- */
+    if (req.files && req.files.length > 0) {
+      const imageUrls = [];
+
+      for (const file of req.files) {
+        const uploadResult = await cloudinary.uploader.upload(
+          `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
+          { folder: "chronolux/products" }
+        );
+        imageUrls.push(uploadResult.secure_url);
+      }
+
+      product.images = imageUrls;
+    }
+
+    /* ---------- UPDATE FIELDS ---------- */
+    if (name) {
+      product.name = name;
+      product.slug = slugify(name, { lower: true });
+    }
+
+    product.basePrice = basePrice ?? product.basePrice;
+    product.category = category ?? product.category;
+    product.collection = collection ?? product.collection;
+    product.shortDescription =
+      shortDescription ?? product.shortDescription;
+    product.description = description ?? product.description;
+    product.isFeatured = isFeatured ?? product.isFeatured;
+    product.status = status ?? product.status;
 
     await product.save();
 
