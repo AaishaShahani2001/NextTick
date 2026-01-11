@@ -1,9 +1,8 @@
-import { ProductType } from "./product";
+import { Product } from "./product";
 
 export type CartItem = {
-  product: ProductType;
+  product: Product;
   quantity: number;
-  selectedColor: string;
 };
 
 export type CartContextType = {
