@@ -8,6 +8,7 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
 
 import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 import adminProductRoutes from "./routes/adminProductRoutes.js";
@@ -27,6 +28,7 @@ mongoose
 app.use("/api/auth", authRoutes);
 app.use("/api", userRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/products", productRoutes);
 
 app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/admin/products", adminProductRoutes);

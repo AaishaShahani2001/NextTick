@@ -1,149 +1,211 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { useState } from "react";
-import { ProductsType, ProductType } from "@/src/types/product";
+import toast from "react-hot-toast";
+import { Product } from "@/src/types/product";
 import { useCart } from "@/src/context/CartContext";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
-// TEMP PRODUCTS – PHASE 1
-const products: ProductsType = [
-  {
-    id: 1,
-    name: "ChronoLux Steel Royale",
-    shortDescription:
-      "A premium stainless steel watch crafted for everyday elegance.",
-    price: 399,
-    collection: "Classic Collection",
-    category: "Luxury",
-    colors: ["silver", "black"],
-    images: {
-      silver: "/products/steel-royale-silver.webp",
-      black: "/products/steel-royale-black.jpg"
-    },
-    isFeatured: true
-  },
-  {
-    id: 2,
-    name: "ChronoLux Midnight Leather",
-    shortDescription:
-      "A refined leather watch designed for timeless sophistication.",
-    price: 279,
-    collection: "Heritage Collection",
-    category: "Classic",
-    colors: ["black", "brown"],
-    images: {
-      black: "/products/midnight-leather-black.jpeg",
-      brown: "/products/midnight-leather-brown.jpg"
-    }
-  },
-  {
-    id: 3,
-    name: "ChronoLux Sport Pro X",
-    shortDescription:
-      "A bold sport watch built for performance and durability.",
-    price: 349,
-    collection: "Sport Collection",
-    category: "Sport",
-    colors: ["black", "blue", "green"],
-    images: {
-      black: "/products/sport-pro-black.png",
-      blue: "/products/sport-pro-blue.jpg",
-      green: "/products/sport-pro-green.webp"
-    },
-    isFeatured: true
-  }
-];
-
-export default function ProductDetailsPage() {
-  const params = useParams();
-  const productId = params.id;
+export default function WatchDetailsPage() {
+  const { id } = useParams();
   const { addToCart } = useCart();
 
-  const product: ProductType | undefined = products.find(
-    (p) => String(p.id) === productId
-  );
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  /* IMAGE STATE */
+  const [activeImage, setActiveImage] = useState(0);
+
+  /* ================= FETCH PRODUCT ================= */
+
+  const fetchProduct = async () => {
+    try {
+      setLoading(true);
+
+      const res = await fetch(
+        `http://localhost:3000/api/products/${id}`,
+        { cache: "no-store" }
+      );
+
+      if (!res.ok) throw new Error();
+
+      const data: Product = await res.json();
+      setProduct(data);
+    } catch {
+      toast.error("Failed to load watch");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProduct();
+  }, [id]);
+
+  /* ================= LOADING / ERROR ================= */
+
+  if (loading) {
+    return (
+      <div className="py-25 text-center text-gray-400">
+        Loading watch…
+      </div>
+    );
+  }
 
   if (!product) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-20 text-center">
+      <div className="py-25 text-center">
         <h2 className="text-2xl font-semibold text-white">
-          Product not found
+          Watch not found
         </h2>
-        <p className="text-gray-400 mt-2">
-          The watch you are looking for does not exist.
+        <p className="mt-2 text-gray-400">
+          The requested timepiece does not exist.
         </p>
       </div>
     );
   }
 
-  // 🔥 Color → Image logic
-  const [selectedColor, setSelectedColor] = useState<string>(
-    product.colors[0]
-  );
+  const images = product.images || [];
 
-  const imageSrc =
-    product.images[selectedColor] ??
-    product.images[product.colors[0]];
+  /* ================= UI ================= */
 
   return (
-    <section className="max-w-7xl mx-auto px-6 md:px-12 py-20">
-      {/* Breadcrumb */}
-      <p className="text-sm text-gray-500 mb-6">
-        Home / Watches / {product.name}
-      </p>
+    <section className="max-w-7xl mx-auto px-1 md:px-3 py-5">
+      {/* BREADCRUMB */}
+      <nav className="mb-6 text-sm text-gray-500">
+        <ol className="flex items-center gap-2">
+          <li>
+            <Link
+              href="/"
+              className="hover:text-[#d4af37] transition"
+            >
+              Home
+            </Link>
+          </li>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-        {/* IMAGE */}
-        <div className="relative w-full h-130 rounded-2xl overflow-hidden border border-white/10 bg-black">
-          <Image
-            src={imageSrc}
-            alt={product.name}
-            fill
-            className="object-cover transition-all duration-500"
-          />
+          <li className="opacity-60">/</li>
+
+          <li>
+            <Link
+              href="/watches"
+              className="hover:text-[#d4af37] transition"
+            >
+              Watches
+            </Link>
+          </li>
+
+          <li className="opacity-60">/</li>
+
+          <li className="text-white font-medium truncate max-w-xs">
+            {product.name}
+          </li>
+        </ol>
+      </nav>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
+        {/* ================= IMAGES ================= */}
+        <div>
+          {/* MAIN IMAGE */}
+          <div
+            className="
+              relative h-130 rounded-3xl overflow-hidden
+              bg-white/5 backdrop-blur
+              border border-white/10
+            "
+          >
+            {images.length > 0 && (
+              <Image
+                src={images[activeImage]}
+                alt={product.name}
+                fill
+                priority
+                className="object-cover transition-all duration-700"
+              />
+            )}
+
+            {/* ARROWS */}
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={() =>
+                    setActiveImage(i =>
+                      i === 0 ? images.length - 1 : i - 1
+                    )
+                  }
+                  className="
+                    absolute left-4 top-1/2 -translate-y-1/2
+                    p-2 rounded-full bg-black/40
+                    border border-white/10 text-white
+                  "
+                >
+                  <ChevronLeft />
+                </button>
+
+                <button
+                  onClick={() =>
+                    setActiveImage(i =>
+                      i === images.length - 1 ? 0 : i + 1
+                    )
+                  }
+                  className="
+                    absolute right-4 top-1/2 -translate-y-1/2
+                    p-2 rounded-full bg-black/40
+                    border border-white/10 text-white
+                  "
+                >
+                  <ChevronRight />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* THUMBNAILS */}
+          {images.length > 1 && (
+            <div className="mt-6 flex gap-4">
+              {images.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveImage(i)}
+                  className={`
+                    relative h-20 w-20 rounded-xl overflow-hidden
+                    border transition
+                    ${i === activeImage
+                      ? "border-[#d4af37]"
+                      : "border-white/10 opacity-70 hover:opacity-100"
+                    }
+                  `}
+                >
+                  <Image src={img} alt="thumb" fill className="object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* DETAILS */}
+        {/* ================= DETAILS ================= */}
         <div>
-          <p className="text-sm text-[#d4af37] uppercase tracking-widest">
-            {product.collection}
+          <p className="text-xs uppercase tracking-widest text-[#d4af37]">
+            {product.collection} • {product.category}
           </p>
 
-          <h1 className="mt-3 text-4xl font-bold text-white">
+          <h1 className="mt-4 text-4xl md:text-5xl font-bold text-white">
             {product.name}
           </h1>
 
-          <p className="mt-4 text-gray-400 max-w-xl">
+          <p className="mt-6 text-gray-400 leading-relaxed">
             {product.shortDescription}
           </p>
 
-          <p className="mt-6 text-3xl font-bold text-[#d4af37]">
-            ${product.price}
+          <p className="mt-4 text-gray-500 leading-relaxed">
+            {product.description}
           </p>
 
-          {/* COLORS */}
-          <div className="mt-8">
-            <p className="text-sm text-gray-400 mb-3">
-              Available Colors
-            </p>
-
-            <div className="flex gap-4">
-              {product.colors.map((color) => (
-                <button
-                  key={color}
-                  onClick={() => setSelectedColor(color)}
-                  className={`w-7 h-7 rounded-full border transition
-                    ${selectedColor === color
-                      ? "border-[#d4af37] scale-110"
-                      : "border-white/30"
-                    }`}
-                  style={{ backgroundColor: color }}
-                  aria-label={color}
-                />
-              ))}
-            </div>
-          </div>
+          <p className="mt-8 text-3xl font-semibold text-[#d4af37]">
+            LKR {product.basePrice.toLocaleString()}
+          </p>
 
           {/* ACTIONS */}
           <div className="mt-10 flex gap-4">
@@ -151,24 +213,105 @@ export default function ProductDetailsPage() {
               onClick={() =>
                 addToCart({
                   product,
-                  quantity: 1,
-                  selectedColor
+                  quantity: 1
                 })
               }
-              className="px-8 py-3 rounded-full bg-[#d4af37]
-  text-black font-semibold hover:opacity-90 transition"
+              className="
+                px-8 py-3 rounded-full
+                bg-[#d4af37] text-black
+                font-semibold hover:opacity-90
+              "
             >
               Add to Cart
             </button>
 
             <button
-              className="px-8 py-3 rounded-full border border-[#d4af37]
-              text-[#d4af37] hover:bg-[#d4af37]
-              hover:text-black transition"
+              className="
+                px-8 py-3 rounded-full
+                border border-[#d4af37]
+                text-[#d4af37]
+                hover:bg-[#d4af37] hover:text-black
+                transition
+              "
             >
               Buy Now
             </button>
           </div>
+
+          {/* VARIANTS */}
+          <div className="mt-16">
+            <h3 className="text-xl font-semibold text-[#d4af37] mb-6 tracking-wide">
+              Available Variants
+            </h3>
+
+            <div className="grid gap-6">
+              {product.variants.map((v, i) => {
+                const stockStatus =
+                  v.stock === 0
+                    ? {
+                      label: "Out of Stock",
+                      style:
+                        "bg-red-500/10 text-red-400 border-red-500/20"
+                    }
+                    : v.stock <= 3
+                      ? {
+                        label: "Low Stock",
+                        style:
+                          "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                      }
+                      : {
+                        label: "In Stock",
+                        style:
+                          "bg-green-500/10 text-green-400 border-green-500/20"
+                      };
+
+                return (
+                  <div
+                    key={i}
+                    className="
+            relative p-6 rounded-3xl
+            bg-white/5 backdrop-blur-xl
+            border border-white/10
+            hover:border-[#d4af37]/40
+            transition
+          "
+                  >
+                    {/* STOCK BADGE */}
+                    <span
+                      className={`
+              absolute top-5 right-5
+              px-3 py-1 rounded-full
+              text-xs font-semibold
+              border ${stockStatus.style}
+            `}
+                    >
+                      {stockStatus.label}
+                    </span>
+
+                    {/* VARIANT INFO */}
+                    <p className="text-white text-lg font-medium">
+                      {v.strapType}
+                      <span className="text-gray-400 font-normal">
+                        {" "}• {v.color} • {v.sizeMM}mm
+                      </span>
+                    </p>
+
+                    <div className="mt-4 grid grid-cols-2 gap-y-2 text-sm text-gray-400">
+                      <span>
+                        <span className="text-gray-500">SKU:</span> {v.sku}
+                      </span>
+
+                      <span>
+                        <span className="text-gray-500">Price Adj:</span>{" "}
+                        +LKR {v.priceAdjustment.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
