@@ -9,7 +9,7 @@ export default function CartPage() {
   const { cart, increaseQty, decreaseQty, removeFromCart } = useCart();
 
   const subtotal = cart.reduce(
-    (total, item) => total + item.product.price * item.quantity,
+    (total, item) => total + item.product.basePrice * item.quantity,
     0
   );
 
@@ -42,91 +42,78 @@ export default function CartPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* ITEMS */}
         <div className="lg:col-span-2 space-y-8">
-          {cart.map((item) => (
-            <div
-              key={`${item.product.id}-${item.selectedColor}`}
-              className="flex gap-6 p-6 rounded-2xl bg-black border border-white/10"
-            >
-              {/* IMAGE */}
-              <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-white/10">
-                <Image
-                  src={
-                    item.product.images[item.selectedColor] ??
-                    item.product.images[item.product.colors[0]]
-                  }
-                  alt={item.product.name}
-                  fill
-                  className="object-cover"
-                />
-              </div>
+          {cart.map((item) => {
+            const imageSrc =
+              Object.values(item.product.images ?? {})[0] ||
+              "/placeholder-watch.jpg";
 
-              {/* DETAILS */}
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white">
-                  {item.product.name}
-                </h3>
-
-                <p className="text-sm text-gray-400 mt-1">
-                  Color:{" "}
-                  <span className="capitalize">
-                    {item.selectedColor}
-                  </span>
-                </p>
-
-                <p className="mt-3 text-[#d4af37] font-semibold">
-                  ${item.product.price}
-                </p>
-
-                {/* QUANTITY CONTROLS */}
-                <div className="mt-4 flex items-center gap-4">
-                  <button
-                    onClick={() =>
-                      decreaseQty(
-                        item.product.id,
-                        item.selectedColor
-                      )
-                    }
-                    className="w-8 h-8 flex items-center justify-center
-                    rounded-full border border-white/20 text-white
-                    hover:border-red-500 hover:text-red-500 transition"
-                  >
-                    <Minus size={14} />
-                  </button>
-
-                  <span className="text-white font-medium">
-                    {item.quantity}
-                  </span>
-
-                  <button
-                    onClick={() =>
-                      increaseQty(
-                        item.product.id,
-                        item.selectedColor
-                      )
-                    }
-                    className="w-8 h-8 flex items-center justify-center
-                    rounded-full border border-white/20 text-white
-                    hover:border-[#d4af37] hover:text-[#d4af37] transition"
-                  >
-                    <Plus size={14} />
-                  </button>
-                </div>
-              </div>
-
-              {/* REMOVE */}
-              <button
-                onClick={() =>
-                  removeFromCart(
-                    item.product.id,
-                    item.selectedColor
-                  )
-                }
-                className="text-red-400 hover:text-red-500 transition"
+            return (
+              <div
+                key={item.product._id}
+                className="flex gap-6 p-6 rounded-2xl bg-black border border-white/10"
               >
-                <Trash2 size={18} />
-              </button>
-            </div>
-          ))}
+                {/* IMAGE */}
+                <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-white/10">
+                  <Image
+                    src={imageSrc}
+                    alt={item.product.name}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+
+                {/* DETAILS */}
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white">
+                    {item.product.name}
+                  </h3>
+
+                  <p className="mt-3 text-[#d4af37] font-semibold">
+                    LKR{item.product.basePrice}
+                  </p>
+
+                  {/* QUANTITY CONTROLS */}
+                  <div className="mt-4 flex items-center gap-4">
+                    <button
+                      onClick={() =>
+                        decreaseQty(item.product._id)
+                      }
+                      className="w-8 h-8 flex items-center justify-center
+                      rounded-full border border-white/20 text-white
+                      hover:border-red-500 hover:text-red-500 transition"
+                    >
+                      <Minus size={14} />
+                    </button>
+
+                    <span className="text-white font-medium">
+                      {item.quantity}
+                    </span>
+
+                    <button
+                      onClick={() =>
+                        increaseQty(item.product._id)
+                      }
+                      className="w-8 h-8 flex items-center justify-center
+                      rounded-full border border-white/20 text-white
+                      hover:border-[#d4af37] hover:text-[#d4af37] transition"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* REMOVE */}
+                <button
+                  onClick={() =>
+                    removeFromCart(item.product._id)
+                  }
+                  className="text-red-400 hover:text-red-500 transition"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            );
+          })}
         </div>
 
         {/* SUMMARY */}
@@ -155,12 +142,11 @@ export default function CartPage() {
           <Link href="/checkout">
             <button
               className="mt-8 w-full py-3 rounded-full bg-[#d4af37]
-    text-black font-semibold hover:opacity-90 transition"
+              text-black font-semibold hover:opacity-90 transition"
             >
               Proceed to Checkout
             </button>
           </Link>
-
         </div>
       </div>
     </section>

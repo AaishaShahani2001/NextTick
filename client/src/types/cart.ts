@@ -8,8 +8,8 @@ export type CartItem = {
 export type CartContextType = {
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
-  increaseQty: (productId: string | number, color: string) => void;
-  decreaseQty: (productId: string | number, color: string) => void;
-  removeFromCart: (productId: string | number, color: string) => void;
+  increaseQty: (productId: string | number) => void;
+  decreaseQty: (productId: string | number) => void;
+  removeFromCart: (productId: string | number) => void;
   clearCart: () => void;
 };
