@@ -13,6 +13,7 @@ type Order = {
   totalAmount: number;
   status: OrderStatus;
   createdAt: string;
+  cancelledBy: string;
   user: {
     name: string;
     email: string;
@@ -27,8 +28,8 @@ const STATUS_OPTIONS: OrderStatus[] = [
 ];
 
 const getAllowedNextStatuses = (status: OrderStatus) => {
-  if (status === "Pending") return ["Processing"];
-  if (status === "Processing") return ["Delivered"];
+  if (status === "Pending") return ["Processing", "Cancelled"];
+  if (status === "Processing") return ["Delivered", "Cancelled"];
   return [];
 };
 
@@ -93,9 +94,16 @@ export default function AdminOrdersPage() {
 
       setOrders((prev) =>
         prev.map((o) =>
-          o._id === orderId ? { ...o, status } : o
+          o._id === orderId
+            ? {
+              ...o,
+              status,
+              cancelledBy: status === "Cancelled" ? "admin" : o.cancelledBy
+            }
+            : o
         )
       );
+
     } catch (err: any) {
       toast.error(err.message || "Status update failed");
     }
@@ -224,7 +232,9 @@ export default function AdminOrdersPage() {
                 <td className="p-4">
                   {o.status === "Cancelled" ? (
                     <span className="text-red-400 text-sm">
-                      Cancelled by customer
+                      {o.cancelledBy === "admin"
+                        ? "Cancelled by admin"
+                        : "Cancelled by customer"}
                     </span>
                   ) : (
                     <select
@@ -242,7 +252,7 @@ export default function AdminOrdersPage() {
 
                       {getAllowedNextStatuses(o.status).map((s) => (
                         <option key={s} value={s}>
-                          Move to {s}
+                          {s === "Cancelled" ? "Cancel Order" : `Move to ${s}`}
                         </option>
                       ))}
                     </select>

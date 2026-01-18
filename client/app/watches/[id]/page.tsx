@@ -16,6 +16,10 @@ export default function WatchDetailsPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [selectedVariant, setSelectedVariant] =
+    useState<Product["variants"][0] | null>(null);
+
+
   /* IMAGE STATE */
   const [activeImage, setActiveImage] = useState(0);
 
@@ -210,32 +214,54 @@ export default function WatchDetailsPage() {
           {/* ACTIONS */}
           <div className="mt-10 flex gap-4">
             <button
-              onClick={() =>
+              disabled={!selectedVariant || selectedVariant.stock === 0}
+              onClick={() => {
+                if (!selectedVariant) {
+                  toast.error("Please select a variant");
+                  return;
+                }
+
                 addToCart({
                   product,
-                  quantity: 1
-                })
-              }
-              className="
-                px-8 py-3 rounded-full
-                bg-[#d4af37] text-black
-                font-semibold hover:opacity-90
-              "
+                  quantity: 1,
+                  selectedVariant
+                });
+
+                toast.success("Added to cart");
+              }}
+              className={`
+    px-8 py-3 rounded-full font-semibold transition
+    ${!selectedVariant || selectedVariant.stock === 0
+                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                  : "bg-[#d4af37] text-black hover:opacity-90"
+                }
+  `}
             >
               Add to Cart
             </button>
 
-            <button
-              className="
-                px-8 py-3 rounded-full
-                border border-[#d4af37]
-                text-[#d4af37]
-                hover:bg-[#d4af37] hover:text-black
-                transition
-              "
+
+            <Link href="/checkout"
+              onClick={() => {
+                if (!selectedVariant) {
+                  toast.error("Please select a variant");
+                  return;
+                }
+
+                addToCart({
+                  product,
+                  quantity: 1,
+                  selectedVariant
+                });
+
+
+              }}
+              className="px-8 py-3 rounded-full border border-[#d4af37]
+    text-[#d4af37] hover:bg-[#d4af37] hover:text-black transition"
             >
               Buy Now
-            </button>
+            </Link>
+
           </div>
 
           {/* VARIANTS */}
@@ -268,14 +294,22 @@ export default function WatchDetailsPage() {
                 return (
                   <div
                     key={i}
-                    className="
-            relative p-6 rounded-3xl
-            bg-white/5 backdrop-blur-xl
-            border border-white/10
-            hover:border-[#d4af37]/40
-            transition
-          "
+                    onClick={() => {
+                      if (v.stock === 0) return;
+                      setSelectedVariant(v);
+                    }}
+                    className={`
+    relative p-6 rounded-3xl cursor-pointer
+    bg-white/5 backdrop-blur-xl
+    border transition
+    ${selectedVariant?.sku === v.sku
+                        ? "border-[#d4af37]"
+                        : "border-white/10 hover:border-[#d4af37]/40"
+                      }
+    ${v.stock === 0 ? "opacity-50 cursor-not-allowed" : ""}
+  `}
                   >
+
                     {/* STOCK BADGE */}
                     <span
                       className={`
@@ -305,6 +339,14 @@ export default function WatchDetailsPage() {
                         <span className="text-gray-500">Price Adj:</span>{" "}
                         +LKR {v.priceAdjustment.toLocaleString()}
                       </span>
+                      {selectedVariant && (
+                        <p className="mt-4 text-sm text-gray-400">
+                          Selected: {selectedVariant.strapType} •{" "}
+                          {selectedVariant.color} • {selectedVariant.sizeMM}mm
+                        </p>
+                      )}
+
+
                     </div>
                   </div>
                 );

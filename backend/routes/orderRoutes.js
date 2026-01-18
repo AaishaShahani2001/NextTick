@@ -1,6 +1,7 @@
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
 import Order from "../models/Order.js";
+import Product from "../models/Product.js";
 
 const router = express.Router();
 
@@ -13,11 +14,53 @@ router.post("/", authMiddleware, async (req, res) => {
       return res.status(400).json({ message: "No items in order" });
     }
 
+    // Validate stock
+    for (const item of items) {
+      const product = await Product.findById(item.productId);
+
+      if (!product) {
+        return res.status(404).json({
+          message: `Product not found: ${item.name}`
+        });
+      }
+
+      const variant = product.variants.find(
+        (v) => v.sku === item.sku
+      );
+
+      if (!variant) {
+        return res.status(400).json({
+          message: `Variant not found: ${item.sku}`
+        });
+      }
+
+      if (variant.stock < item.quantity) {
+        return res.status(400).json({
+          message: `Insufficient stock for ${item.name}`
+        });
+      }
+    }
+
+    // Deduct stock
+    for (const item of items) {
+      await Product.updateOne(
+        {
+          _id: item.productId,
+          "variants.sku": item.sku
+        },
+        {
+          $inc: { "variants.$.stock": -item.quantity }
+        }
+      );
+    }
+
+    // Create order
     const order = new Order({
       user: req.user._id,
       items,
       shippingAddress,
-      totalAmount
+      totalAmount,
+      paymentMethod: "COD"
     });
 
     await order.save();
@@ -27,9 +70,11 @@ router.post("/", authMiddleware, async (req, res) => {
       orderId: order._id
     });
   } catch (err) {
+    console.error("Order error:", err);
     res.status(500).json({ message: "Order creation failed" });
   }
 });
+
 
 
 /* ================= GET ALL ORDERS  ================= */
@@ -37,7 +82,7 @@ router.get("/my", authMiddleware, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
       .sort({ createdAt: -1 })
-      .select("_id totalAmount status createdAt");
+      .select("_id totalAmount status createdAt cancelledBy");
 
     res.json(orders);
   } catch (error) {
@@ -67,22 +112,24 @@ router.get("/:id", authMiddleware, async (req, res) => {
 
 
 /* ================= EDIT ORDER  ================= */
-router.get("/:id", authMiddleware, async (req, res) => {
-  try {
-    const order = await Order.findOne({
-      _id: req.params.id,
-      user: req.user._id
-    });
+// router.get("/:id", authMiddleware, async (req, res) => {
 
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
+//   try {
+//     const order = await Order.findOne({
+//       _id: req.params.id,
+//       user: req.user._id
+//     });
 
-    res.json(order);
-  } catch (err) {
-    res.status(500).json({ message: "Failed to fetch order" });
-  }
-});
+//     if (!order) {
+//       return res.status(404).json({ message: "Order not found" });
+//     }
+
+//     res.json(order);
+//   } catch (err) {
+//     res.status(500).json({ message: "Failed to fetch order" });
+//   }
+// });
+
 
 /* ================= CANCEL ORDER (PENDING ONLY) ================= */
 router.put("/:id/cancel", authMiddleware, async (req, res) => {
@@ -96,12 +143,26 @@ router.put("/:id/cancel", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // ONLY Pending orders can be cancelled
     if (order.status !== "Pending") {
       return res.status(400).json({
-        message:
-          "Only pending orders can be cancelled. Please contact the store or support team."
+        message: "Only pending orders can be cancelled"
       });
+    }
+
+    order.status = "Cancelled";
+    order.cancelledBy = "customer";
+
+    // Restore stock
+    for (const item of order.items) {
+      await Product.updateOne(
+        {
+          _id: item.productId,
+          "variants.sku": item.sku
+        },
+        {
+          $inc: { "variants.$.stock": item.quantity }
+        }
+      );
     }
 
     order.status = "Cancelled";
@@ -112,6 +173,7 @@ router.put("/:id/cancel", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Cancel failed" });
   }
 });
+
 
 
 

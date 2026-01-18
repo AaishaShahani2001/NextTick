@@ -30,9 +30,20 @@ type DashboardStats = {
   recentOrders: RecentOrder[];
 };
 
+type LowStockProduct = {
+  _id: string;
+  name: string;
+  stock: number;
+  price: number;
+};
+
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [lowStock, setLowStock] = useState<LowStockProduct[]>([]);
 
+
+  // FETCH STATS IN DASHBOARD
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -58,6 +69,34 @@ export default function AdminDashboard() {
 
     fetchStats();
   }, []);
+
+  // LOW STOCK ALERT
+  useEffect(() => {
+  const fetchLowStock = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(
+        "http://localhost:3000/api/admin/products/low-stock",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      setLowStock(data);
+    } catch (err) {
+      console.error("Low stock fetch failed");
+    }
+  };
+
+  fetchLowStock();
+}, []);
+
 
   if (!stats) {
     return (
@@ -170,6 +209,50 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+        {/* LOW STOCK */}
+      {lowStock.length > 0 && (
+  <div className="mt-10 bg-black border border-red-500/30
+  rounded-xl p-6">
+    <h2 className="text-lg font-semibold text-red-400 mb-4">
+      ⚠️ Low Stock Alerts
+    </h2>
+
+    <div className="space-y-3">
+      {lowStock.map((p) => (
+        <div
+          key={p._id}
+          className="flex justify-between items-center
+          border border-white/10 rounded-lg p-4
+          hover:border-red-500/40 transition"
+        >
+          <div>
+            <p className="text-white font-medium">
+              {p.name}
+            </p>
+            <p className="text-xs text-gray-400">
+              Only {p.stock} left in stock
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <p className="text-[#d4af37] font-semibold">
+              ${p.price}
+            </p>
+
+            <Link
+              href={`/admin/products/${p._id}`}
+              className="text-sm text-red-400 hover:underline"
+            >
+              View
+            </Link>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
     </>
   );
 }
