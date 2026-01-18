@@ -1,52 +1,63 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
 import toast from "react-hot-toast";
 import { Product } from "@/src/types/product";
 
-/* ================= FILTER OPTIONS ================= */
-
-const CATEGORY_OPTIONS = ["All", "Men", "Women", "Unisex", "Luxury", "Sport"];
+const CATEGORY_OPTIONS = ["All", "Men", "Women", "Unisex"];
 const COLLECTION_OPTIONS = ["All", "Classic", "Sport", "Luxury", "Limited"];
 
-/* ================= COMPONENT ================= */
-
 export default function WatchesPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  /* URL PARAMS */
+  const collectionParam = searchParams.get("collection") || "All";
+  const categoryParam = searchParams.get("category") || "All";
+
+  /* STATE */
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /* Filters */
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All");
-  const [collection, setCollection] = useState("All");
+  const [category, setCategory] = useState(categoryParam);
+  const [collection, setCollection] = useState(collectionParam);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
 
   /* ================= FETCH PRODUCTS ================= */
 
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-
-      const res = await fetch("http://localhost:3000/api/products", {
-        cache: "no-store"
-      });
-
-      if (!res.ok) throw new Error();
-
-      const data: Product[] = await res.json();
-      setProducts(data);
-    } catch {
-      toast.error("Failed to load watches");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("http://localhost:3000/api/products", {
+          cache: "no-store"
+        });
+        if (!res.ok) throw new Error();
+        setProducts(await res.json());
+      } catch {
+        toast.error("Failed to load watches");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchProducts();
   }, []);
+
+  /* ================= SYNC FILTERS → URL ================= */
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    if (collection !== "All") params.set("collection", collection);
+    if (category !== "All") params.set("category", category);
+
+    router.replace(`/watches?${params.toString()}`);
+  }, [collection, category]);
 
   /* ================= FILTER LOGIC ================= */
 
@@ -54,9 +65,7 @@ export default function WatchesPage() {
     return products.filter(p => {
       const matchesSearch =
         p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.shortDescription.toLowerCase().includes(search.toLowerCase()) ||
-        p.category.toLowerCase().includes(search.toLowerCase()) ||
-        p.collection.toLowerCase().includes(search.toLowerCase());
+        p.shortDescription.toLowerCase().includes(search.toLowerCase());
 
       const matchesCategory =
         category === "All" || p.category === category;
@@ -83,26 +92,14 @@ export default function WatchesPage() {
   /* ================= UI ================= */
 
   return (
-    <section className="max-w-7xl mx-auto px-6 md:px-12 py-14">
-      {/* HEADER */}
-      <div className="mb-14 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold text-white tracking-wide">
-          All Watches
-        </h1>
-        <p className="mt-4 text-gray-400 max-w-2xl mx-auto">
-          Discover our curated selection of luxury timepieces,
-          crafted with precision and timeless elegance.
-        </p>
-      </div>
+    <section className="max-w-7xl mx-auto px-6 py-14">
+      <h1 className="text-4xl font-bold text-white mb-10 text-center">
+        {collection === "All" ? "All Watches" : `${collection} Watches`}
+      </h1>
 
       {/* FILTER BAR */}
-      <div
-        className="
-          mb-14 p-6 rounded-3xl
-          bg-white/5 backdrop-blur-xl
-          border border-white/10
-          grid grid-cols-1 md:grid-cols-5 gap-6
-        "
+      <div className="mb-12 grid grid-cols-1 md:grid-cols-5 gap-6
+        bg-white/5 border border-white/10 p-6 rounded-3xl backdrop-blur-xl"
       >
         <input
           placeholder="Search watches..."
@@ -117,7 +114,7 @@ export default function WatchesPage() {
           className="lux-input"
         >
           {CATEGORY_OPTIONS.map(c => (
-            <option key={c} value={c}>{c}</option>
+            <option key={c}>{c}</option>
           ))}
         </select>
 
@@ -127,7 +124,7 @@ export default function WatchesPage() {
           className="lux-input"
         >
           {COLLECTION_OPTIONS.map(c => (
-            <option key={c} value={c}>{c}</option>
+            <option key={c}>{c}</option>
           ))}
         </select>
 
@@ -149,24 +146,21 @@ export default function WatchesPage() {
         </div>
       </div>
 
-      {/* CONTENT */}
+      {/* GRID */}
       {loading ? (
-        <div className="py-20 text-center text-gray-400">
-          Loading watches...
-        </div>
-      ) : filteredProducts.length > 0 ? (
+        <p className="text-center text-gray-400 py-20">
+          Loading watches…
+        </p>
+      ) : filteredProducts.length ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-12">
-          {filteredProducts.map(product => (
-            <ProductCard
-              key={product._id}
-              product={product}
-            />
+          {filteredProducts.map(p => (
+            <ProductCard key={p._id} product={p} />
           ))}
         </div>
       ) : (
-        <div className="text-center text-gray-400 py-20">
-          No watches match your filters.
-        </div>
+        <p className="text-center text-gray-400 py-20">
+          No watches found.
+        </p>
       )}
     </section>
   );

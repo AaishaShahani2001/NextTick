@@ -31,4 +31,113 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
+
+/* ================= GET ALL ORDERS  ================= */
+router.get("/my", authMiddleware, async (req, res) => {
+  try {
+    const orders = await Order.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .select("_id totalAmount status createdAt");
+
+    res.json(orders);
+  } catch (error) {
+    console.error("Fetch orders error:", error);
+    res.status(500).json({ message: "Failed to fetch orders" });
+  }
+});
+
+
+/* ================= GET A SINGLE ORDER  ================= */
+router.get("/:id", authMiddleware, async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch order" });
+  }
+});
+
+
+/* ================= EDIT ORDER  ================= */
+router.get("/:id", authMiddleware, async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch order" });
+  }
+});
+
+// User cancel order (only if Processing)
+router.put("/:id/cancel", authMiddleware, async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (order.status !== "Processing") {
+      return res.status(400).json({
+        message: "Order cannot be cancelled. Please contact support."
+      });
+    }
+
+    order.status = "Cancelled";
+    await order.save();
+
+    res.json({ message: "Order cancelled successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Cancel failed" });
+  }
+});
+
+
+router.put("/:id/edit-request", authMiddleware, async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (order.status !== "Processing") {
+      return res.status(400).json({
+        message: "Order cannot be edited. Please contact support."
+      });
+    }
+
+    // optional flag for admin
+    order.editRequested = true;
+    await order.save();
+
+    res.json({ message: "Edit request sent to store" });
+  } catch (err) {
+    res.status(500).json({ message: "Edit request failed" });
+  }
+});
+
+
 export default router;

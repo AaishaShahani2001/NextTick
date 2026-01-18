@@ -32,3 +32,26 @@ export const getProductById = async (req, res) => {
     res.status(400).json({ message: "Invalid product ID" });
   }
 };
+
+
+/* ================= GET WATCH COLLECTION (USER) ================= */
+// GET /api/products/collections
+
+export const getCollections = async (req, res) => {
+  try {
+    const collections = await Product.aggregate([
+      {
+        $group: {
+          _id: "$collection",
+          count: { $sum: 1 },
+          image: { $first: "$images" }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    res.json(collections);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to load collections" });
+  }
+};

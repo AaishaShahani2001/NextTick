@@ -12,42 +12,9 @@ import {
   Package
 } from "lucide-react";
 import { useCart } from "@/src/context/CartContext";
-import { ProductType } from "@/src/types/product";
+//import { ProductType } from "@/src/types/product";
 import { useAuth } from "@/src/context/AuthContext";
 
-/* ---------------- TEMP PRODUCTS (SEARCH SOURCE) ---------------- */
-const products: ProductType[] = [
-  {
-    id: 1,
-    name: "ChronoLux Steel Royale",
-    shortDescription: "",
-    price: 399,
-    category: "Luxury",
-    collection: "Classic Collection",
-    colors: ["silver", "black"],
-    images: { silver: "", black: "" }
-  },
-  {
-    id: 2,
-    name: "ChronoLux Midnight Leather",
-    shortDescription: "",
-    price: 279,
-    category: "Classic",
-    collection: "Heritage Collection",
-    colors: ["black", "brown"],
-    images: { black: "", brown: "" }
-  },
-  {
-    id: 3,
-    name: "ChronoLux Sport Pro X",
-    shortDescription: "",
-    price: 349,
-    category: "Sport",
-    collection: "Sport Collection",
-    colors: ["black", "blue", "green"],
-    images: { black: "", blue: "", green: "" }
-  }
-];
 
 /* ---------------- NAV LINKS ---------------- */
 const navLinks = [
@@ -57,7 +24,15 @@ const navLinks = [
   { label: "About", href: "/about" }
 ];
 
-export default function Navbar() {
+type NavbarProps = {
+  products: {
+    _id: string;
+    name: string;
+    collection: string;
+  }[];
+};
+
+export default function Navbar({ products = [] }: NavbarProps) {
   const [open, setOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState("");
@@ -68,7 +43,9 @@ export default function Navbar() {
   const profileRef = useRef<HTMLDivElement | null>(null);
 
   const { cart } = useCart();
-  const { isLoggedIn, logout } = useAuth(); // ✅ FIXED
+  const [mounted, setMounted] = useState(false);
+
+  const { isLoggedIn, logout } = useAuth();
 
   const cartCount = cart.reduce(
     (total, item) => total + item.quantity,
@@ -76,14 +53,21 @@ export default function Navbar() {
   );
 
   /* ---------------- SEARCH LOGIC ---------------- */
-  const filteredProducts =
-    query.length === 0
-      ? []
-      : products.filter(
-          (p) =>
-            p.name.toLowerCase().includes(query.toLowerCase()) ||
-            p.collection.toLowerCase().includes(query.toLowerCase())
+const filteredProducts =
+  query.trim().length === 0
+    ? []
+    : products.filter((p) => {
+        const q = query.toLowerCase();
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.collection.toLowerCase().includes(q)
         );
+      });
+
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   /* ---------------- CLICK OUTSIDE ---------------- */
   useEffect(() => {
@@ -115,7 +99,7 @@ export default function Navbar() {
 
   /* ---------------- LOGOUT ---------------- */
   const handleLogout = () => {
-    logout();              // ✅ FIXED
+    logout();
     setShowProfile(false);
   };
 
@@ -145,20 +129,72 @@ export default function Navbar() {
 
         {/* RIGHT ICONS */}
         <div className="hidden md:flex items-center gap-5 text-gray-300 relative">
-          <Search
-            onClick={() => setShowSearch((prev) => !prev)}
-            className="hover:text-[#d4af37] cursor-pointer transition"
-          />
+          {/* SEARCH ICON */}
+  <Search
+    onClick={() => setShowSearch(true)}
+    className="hover:text-[#d4af37] cursor-pointer transition"
+  />
+
+  {/* SEARCH INPUT + RESULTS */}
+  {showSearch && (
+    <div
+      ref={searchRef}
+      className="absolute right-0 top-full mt-4 w-80 bg-black
+      border border-white/10 rounded-xl p-4 z-50"
+    >
+      <input
+        ref={searchInputRef}
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search watches or collections..."
+        className="w-full px-4 py-2 rounded-lg bg-black
+        border border-white/20 text-sm text-white
+        placeholder-gray-400 focus:outline-none
+        focus:border-[#d4af37]"
+      />
+
+      {/* RESULTS */}
+      {filteredProducts.length > 0 && (
+        <ul className="mt-3 max-h-60 overflow-y-auto">
+          {filteredProducts.map((product) => (
+            <li key={product._id}>
+              <Link
+                href={`/watches/${product._id}`}
+                onClick={() => {
+                  setShowSearch(false);
+                  setQuery("");
+                }}
+                className="block px-3 py-2 text-sm text-gray-300
+                hover:bg-white/5 rounded-lg"
+              >
+                {product.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* EMPTY STATE */}
+      {query.length > 0 && filteredProducts.length === 0 && (
+        <p className="mt-3 text-sm text-gray-400">
+          No results found
+        </p>
+      )}
+    </div>
+  )}
 
           <Link href="/cart" className="relative">
             <ShoppingCart className="hover:text-[#d4af37] cursor-pointer transition" />
-            {cartCount > 0 && (
+
+            {mounted && cart.length > 0 && (
               <span className="absolute -top-2 -right-2 bg-[#d4af37] text-black
-                text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                {cartCount}
+      text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                {cart.reduce((total, item) => total + item.quantity, 0)}
               </span>
             )}
           </Link>
+
 
           {/* AUTH SECTION */}
           {isLoggedIn ? (
