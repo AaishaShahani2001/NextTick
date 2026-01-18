@@ -13,6 +13,7 @@ import productRoutes from "./routes/productRoutes.js";
 import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 import adminProductRoutes from "./routes/adminProductRoutes.js";
 import adminOrderRoutes from "./routes/adminOrderRoutes.js";
+import adminStatsRoutes from "./routes/adminStatsRoute.js"
 
 //import cloudinary from "./utils/cloudinary.js";
 
@@ -33,12 +34,14 @@ app.use("/api/products", productRoutes);
 app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/admin/products", adminProductRoutes);
 app.use("/api/admin/orders", adminOrderRoutes);
+app.use("/api/admin/stats", adminStatsRoutes);
 
 app.listen(3000, () => console.log("Server running on port 3000"));
 
 
-console.log("Cloudinary:", {
-  cloud: process.env.CLOUDINARY_CLOUD_NAME,
-  key: process.env.CLOUDINARY_API_KEY ? "FOUND" : "MISSING",
-  secret: process.env.CLOUDINARY_API_SECRET ? "FOUND" : "MISSING"
-});
+// DEBUG
+// console.log("Cloudinary:", {
+//   cloud: process.env.CLOUDINARY_CLOUD_NAME,
+//   key: process.env.CLOUDINARY_API_KEY ? "FOUND" : "MISSING",
+//   secret: process.env.CLOUDINARY_API_SECRET ? "FOUND" : "MISSING"
+// });

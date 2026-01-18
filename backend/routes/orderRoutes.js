@@ -84,7 +84,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// User cancel order (only if Processing)
+/* ================= CANCEL ORDER (PENDING ONLY) ================= */
 router.put("/:id/cancel", authMiddleware, async (req, res) => {
   try {
     const order = await Order.findOne({
@@ -96,9 +96,11 @@ router.put("/:id/cancel", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    if (order.status !== "Processing") {
+    // ONLY Pending orders can be cancelled
+    if (order.status !== "Pending") {
       return res.status(400).json({
-        message: "Order cannot be cancelled. Please contact support."
+        message:
+          "Only pending orders can be cancelled. Please contact the store or support team."
       });
     }
 
@@ -110,6 +112,7 @@ router.put("/:id/cancel", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Cancel failed" });
   }
 });
+
 
 
 router.put("/:id/edit-request", authMiddleware, async (req, res) => {
