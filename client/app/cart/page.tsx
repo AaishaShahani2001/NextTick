@@ -8,10 +8,13 @@ import { useCart } from "@/src/context/CartContext";
 export default function CartPage() {
   const { cart, increaseQty, decreaseQty, removeFromCart } = useCart();
 
-  const subtotal = cart.reduce(
-    (total, item) => total + item.product.basePrice * item.quantity,
-    0
+  const subtotal = cart.reduce((total, item) => {
+  const adjustment = item.selectedVariant?.priceAdjustment ?? 0;
+  return (
+    total +
+    (item.product.basePrice + adjustment) * item.quantity
   );
+}, 0);
 
   if (cart.length === 0) {
     return (
@@ -43,13 +46,13 @@ export default function CartPage() {
         {/* ITEMS */}
         <div className="lg:col-span-2 space-y-8">
           {cart.map((item) => {
+            if (!item.selectedVariant) return null;
             const imageSrc =
-              Object.values(item.product.images ?? {})[0] ||
-              "/placeholder-watch.jpg";
+              item.product.images?.[0] || "/placeholder-watch.jpg";
 
             return (
               <div
-                key={item.product._id}
+                key={`${item.product._id}-${item.selectedVariant.sku}`}
                 className="flex gap-6 p-6 rounded-2xl bg-black border border-white/10"
               >
                 {/* IMAGE */}
@@ -68,15 +71,29 @@ export default function CartPage() {
                     {item.product.name}
                   </h3>
 
+                  {/* VARIANT INFO */}
+                  <p className="mt-1 text-sm text-gray-400">
+                    {item.selectedVariant.strapType} •{" "}
+                    {item.selectedVariant.color} •{" "}
+                    {item.selectedVariant.sizeMM}mm
+                  </p>
+
                   <p className="mt-3 text-[#d4af37] font-semibold">
-                    LKR{item.product.basePrice}
+                    LKR{" "}
+                    {(
+                      item.product.basePrice +
+                      item.selectedVariant.priceAdjustment
+                    ).toFixed(2)}
                   </p>
 
                   {/* QUANTITY CONTROLS */}
                   <div className="mt-4 flex items-center gap-4">
                     <button
                       onClick={() =>
-                        decreaseQty(item.product._id)
+                        decreaseQty(
+                          item.product._id,
+                          item.selectedVariant.sku
+                        )
                       }
                       className="w-8 h-8 flex items-center justify-center
                       rounded-full border border-white/20 text-white
@@ -91,7 +108,10 @@ export default function CartPage() {
 
                     <button
                       onClick={() =>
-                        increaseQty(item.product._id)
+                        increaseQty(
+                          item.product._id,
+                          item.selectedVariant.sku
+                        )
                       }
                       className="w-8 h-8 flex items-center justify-center
                       rounded-full border border-white/20 text-white
@@ -105,7 +125,10 @@ export default function CartPage() {
                 {/* REMOVE */}
                 <button
                   onClick={() =>
-                    removeFromCart(item.product._id)
+                    removeFromCart(
+                      item.product._id,
+                      item.selectedVariant.sku
+                    )
                   }
                   className="text-red-400 hover:text-red-500 transition"
                 >
@@ -129,13 +152,13 @@ export default function CartPage() {
 
           <div className="flex justify-between text-gray-400 mb-6">
             <span>Subtotal</span>
-            <span>${subtotal.toFixed(2)}</span>
+            <span>LKR {subtotal.toFixed(2)}</span>
           </div>
 
           <div className="border-t border-white/10 pt-6 flex justify-between text-lg font-bold text-white">
             <span>Total</span>
             <span className="text-[#d4af37]">
-              ${subtotal.toFixed(2)}
+              LKR {subtotal.toFixed(2)}
             </span>
           </div>
 

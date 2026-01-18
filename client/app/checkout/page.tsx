@@ -18,10 +18,14 @@ export default function CheckoutPage() {
 
   const [loading, setLoading] = useState(false);
 
-  const subtotal = cart.reduce(
-    (total, item) => total + item.product.basePrice * item.quantity,
-    0
-  );
+  const subtotal = cart.reduce((total, item) => {
+    const adjustment = item.selectedVariant?.priceAdjustment ?? 0;
+    return (
+      total +
+      (item.product.basePrice + adjustment) * item.quantity
+    );
+  }, 0);
+
 
   // 🔒 Redirect if cart empty
   useEffect(() => {
@@ -36,61 +40,69 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
-  if (!form.name || !form.email || !form.address || !form.phone) {
-    toast.error("Please fill all fields");
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const token = localStorage.getItem("token");
-
-    const res = await fetch("http://localhost:3000/api/orders", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` })
-      },
-      body: JSON.stringify({
-        items: cart.map((item) => ({
-          productId: item.product._id,
-          name: item.product.name,
-          price: item.product.basePrice,
-          quantity: item.quantity,
-          image:
-            Object.values(item.product.images ?? {})[0] ||
-            "/placeholder-watch.jpg"
-        })),
-        shippingAddress: form,
-        totalAmount: subtotal
-      })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.message || "Order failed");
+    if (!form.name || !form.email || !form.address || !form.phone) {
+      toast.error("Please fill all fields");
+      return;
     }
 
-    toast.success("Order placed successfully 🎉");
+    setLoading(true);
 
-    //  MARK SUCCESS FIRST
-    sessionStorage.setItem("orderSuccess", "true");
+    try {
+      const token = localStorage.getItem("token");
 
-    //  NAVIGATE FIRST
-    router.push("/order-success");
+      const res = await fetch("http://localhost:3000/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({
+          items: cart.map((item) => ({
+            productId: item.product._id,
+            sku: item.selectedVariant.sku,
+            name: item.product.name,
+            price: item.product.basePrice + item.selectedVariant.priceAdjustment,
+            quantity: item.quantity,
+            image:
+              Object.values(item.product.images ?? {})[0] ||
+              "/placeholder-watch.jpg"
+          })),
+          shippingAddress: form,
+          totalAmount: subtotal
+        })
+      });
 
-    // CLEAR CART AFTER NAVIGATION
-    setTimeout(() => {
-      clearCart();
-    }, 0);
-  } catch (err: any) {
-    toast.error(err.message || "Something went wrong");
-  } finally {
-    setLoading(false);
-  }
-};
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Order failed");
+      }
+
+      toast.success("Order placed successfully 🎉");
+
+      //  MARK SUCCESS FIRST
+      sessionStorage.setItem("orderSuccess", "true");
+
+      //  NAVIGATE FIRST
+      router.push("/order-success");
+
+      // CLEAR CART AFTER NAVIGATION
+      setTimeout(() => {
+        clearCart();
+      }, 0);
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (cart.length === 0) {
+      router.replace("/cart");
+    }
+  }, [cart, router]);
+
 
 
   return (
@@ -134,7 +146,8 @@ export default function CheckoutPage() {
               className="flex justify-between text-gray-400 mb-3"
             >
               <span>
-                {item.product.name} × {item.quantity}
+                {item.product.name} ({item.selectedVariant.color},{" "}
+                {item.selectedVariant.sizeMM}mm) × {item.quantity}
               </span>
               <span>
                 ${(item.product.basePrice * item.quantity).toFixed(2)}

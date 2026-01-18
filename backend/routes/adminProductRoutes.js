@@ -4,7 +4,8 @@ import {
   getProducts,
   getProductById,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  lowStockAlert
 } from "../controllers/adminProductController.js";
 
 import authMiddleware from "../middleware/authMiddleware.js";
@@ -28,6 +29,9 @@ router.post(
 // GET all products
 router.get("/", getProducts);
 
+//LOW STOCK PRODUCTS 
+router.get("/low-stock", lowStockAlert);
+
 // GET single product
 router.get("/:id", getProductById);
 
@@ -40,5 +44,7 @@ router.put(
 
 // DELETE product
 router.delete("/:id", deleteProduct);
+
+
 
 export default router;

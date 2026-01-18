@@ -15,6 +15,10 @@ const orderSchema = new mongoose.Schema(
           ref: "Product",
           required: true
         },
+        sku: {
+          type: String,
+          required: true
+        },
         name: String,
         price: Number,
         quantity: Number,
@@ -44,7 +48,14 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       default: "COD"
-    }
+    },
+
+    cancelledBy: {
+  type: String,
+  enum: ["customer", "admin"],
+  default: null
+}
+
   },
   { timestamps: true }
 );

@@ -93,6 +93,45 @@ export const getProducts = async (req, res) => {
   }
 };
 
+/* ================= LOW STOCK ================= */
+export const lowStockAlert = async (req, res) => {
+  try {
+    const THRESHOLD = 5;
+
+    const products = await Product.find({
+      status: "active",
+      "variants.stock": { $lte: THRESHOLD }
+    }).select("name basePrice variants");
+
+    // Extract only low-stock variants
+    const lowStockProducts = products.map((product) => {
+      const lowVariants = product.variants.filter(
+        (v) => v.stock <= THRESHOLD
+      );
+
+      const totalLowStock = lowVariants.reduce(
+        (sum, v) => sum + v.stock,
+        0
+      );
+
+      return {
+        _id: product._id,
+        name: product.name,
+        stock: totalLowStock,
+        price: product.basePrice
+      };
+    });
+
+    res.json(lowStockProducts);
+  } catch (error) {
+    console.error("LOW STOCK ERROR:", error);
+    res.status(500).json({
+      message: "Failed to load low stock products"
+    });
+  }
+};
+
+
 /* ================= GET PRODUCT BY ID ================= */
 export const getProductById = async (req, res) => {
   try {
@@ -199,3 +238,5 @@ export const deleteProduct = async (req, res) => {
     res.status(500).json({ message: "Failed to delete product" });
   }
 };
+
+

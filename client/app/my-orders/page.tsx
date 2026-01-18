@@ -13,6 +13,7 @@ type Order = {
   createdAt: string;
   totalAmount: number;
   status: OrderStatus;
+  cancelledBy: string;
 };
 
 /* ---------------- ORDER TIMELINE ---------------- */
@@ -119,6 +120,12 @@ export default function MyOrdersPage() {
       try {
         const token = localStorage.getItem("token");
 
+        if (!token) {
+          toast.error("Session expired. Please login again.");
+          window.location.href = "/login";
+          return;
+        }
+
         const res = await fetch("http://localhost:3000/api/orders/my", {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -126,9 +133,15 @@ export default function MyOrdersPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message);
 
+
         setOrders(
-          data.filter((order: Order) => order.status !== "Cancelled")
+          data.filter(
+            (order: Order) =>
+              order.status !== "Cancelled" ||
+              order.cancelledBy === "admin"
+          )
         );
+
       } catch (err) {
         console.error(err);
       } finally {
@@ -159,6 +172,7 @@ export default function MyOrdersPage() {
     setShowModal(true);
   };
 
+  // Auto-remove ONLY if cancelled by customer
   const cancelOrder = async () => {
     if (!selectedOrder) return;
 
@@ -185,12 +199,29 @@ export default function MyOrdersPage() {
         )
       );
 
-      // Remove after 8 seconds
+      // Mark as cancelled by customer
+      setOrders((prev) =>
+        prev.map((o) =>
+          o._id === selectedOrder
+            ? { ...o, status: "Cancelled", cancelledBy: "customer" }
+            : o
+        )
+      );
+
+      // Remove ONLY customer-cancelled orders
       setTimeout(() => {
         setOrders((prev) =>
-          prev.filter((o) => o._id !== selectedOrder)
+          prev.filter(
+            (o) =>
+              !(
+                o._id === selectedOrder &&
+                o.cancelledBy === "customer"
+              )
+          )
         );
       }, 8000);
+
+
     } catch (err: any) {
       toast.error(err.message || "Failed to cancel order");
     } finally {
@@ -228,7 +259,7 @@ export default function MyOrdersPage() {
       ) : (
         <div className="space-y-6">
           {orders.map((order) => {
-            const isEditable = order.status === "Pending";
+            const isEditable = order.status === "Pending" && order.cancelledBy !== "admin";
 
             return (
               <div
@@ -261,14 +292,21 @@ export default function MyOrdersPage() {
                   <div>
                     <span
                       className={`px-4 py-2 rounded-full text-sm font-medium
-                      ${order.status === "Delivered"
+    ${order.status === "Delivered"
                           ? "bg-green-500/10 text-green-400"
                           : order.status === "Cancelled"
                             ? "bg-red-500/10 text-red-400"
                             : "bg-yellow-500/10 text-yellow-400"
-                        }`}
+                        }
+  `}
                     >
-                      {order.status}
+                      {order.status === "Cancelled"
+                        ? order.cancelledBy === "admin"
+                          ? "Cancelled by admin"
+                          : order.cancelledBy === "customer"
+                            ? "Cancelled by you"
+                            : "Cancelled"
+                        : order.status}
                     </span>
                   </div>
 
@@ -315,11 +353,12 @@ export default function MyOrdersPage() {
 
                 <OrderTimeline status={order.status} />
 
-                {order.status === "Cancelled" && (
-                  <p className="mt-2 text-xs text-red-400">
-                    This order will be removed shortly.
-                  </p>
-                )}
+                {order.status === "Cancelled" &&
+                  order.cancelledBy === "customer" && (
+                    <p className="mt-2 text-xs text-red-400">
+                      This order will be removed shortly.
+                    </p>
+                  )}
 
                 {!isEditable && (
                   <p className="mt-3 text-sm text-gray-400">
