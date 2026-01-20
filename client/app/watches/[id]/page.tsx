@@ -264,6 +264,8 @@ export default function WatchDetailsPage() {
 
           </div>
 
+          <p className="mt-2 text-red-200">Select your favourite/suitable variants before adding to the cart</p>
+
           {/* VARIANTS */}
           <div className="mt-16">
             <h3 className="text-xl font-semibold text-[#d4af37] mb-6 tracking-wide">

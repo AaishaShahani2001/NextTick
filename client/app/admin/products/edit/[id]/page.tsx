@@ -5,13 +5,24 @@ import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import ProductForm from "@/components/admin/ProductForm";
 
+type Variant = {
+  sku: string;
+  strapType: string;
+  color: string;
+  sizeMM: number;
+  stock: number;
+  priceAdjustment: number;
+};
+
 type Product = {
   _id: string;
   name: string;
   price: number;
+  basePrice: number | string;
   category: string;
   collection: string;
   image?: string;
+  variants: Variant[];
 };
 
 export default function EditProductPage() {

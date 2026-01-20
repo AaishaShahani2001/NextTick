@@ -50,11 +50,9 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         setError(data.message || "Registration failed");
-        setLoading(false);
         return;
       }
 
-      // Save token + fetch /api/me so navbar updates instantly
       await loginWithToken(data.token);
 
       toast.success("Account created successfully");
@@ -67,69 +65,130 @@ export default function RegisterPage() {
   };
 
   return (
-    <section className="w-full flex items-center justify-center px-6 py-32">
-      <div className="w-full max-w-md bg-black border border-white/10 rounded-2xl p-8">
-        <h1 className="text-3xl font-bold text-white mb-6 text-center">
-          Register
+    <>
+      {/* ================= BANNER ================= */}
+      <section
+        className="relative h-[55vh] w-full flex items-start justify-center pt-28"
+        style={{
+          backgroundImage: "url('/images/watch-3.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center"
+        }}
+      >
+        <div className="absolute inset-0 bg-black/50" />
+
+        <h1 className="relative z-10 text-white text-3xl tracking-[0.35em] font-light">
+          ACCOUNT
         </h1>
+      </section>
 
-        <input
-          placeholder="Full Name"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          className="w-full p-4 mb-4 rounded-xl bg-black border border-white/10
-          text-white placeholder-gray-500 focus:outline-none focus:border-[#d4af37]"
-        />
-
-        <input
-          placeholder="Email"
-          type="email"
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          className="w-full p-4 mb-4 rounded-xl bg-black border border-white/10
-          text-white placeholder-gray-500 focus:outline-none focus:border-[#d4af37]"
-        />
-
-        <input
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-          className="w-full p-4 mb-4 rounded-xl bg-black border border-white/10
-          text-white placeholder-gray-500 focus:outline-none focus:border-[#d4af37]"
-        />
-
-        <input
-          type="password"
-          placeholder="Confirm Password"
-          value={form.confirmPassword}
-          onChange={(e) =>
-            setForm({ ...form, confirmPassword: e.target.value })
-          }
-          className="w-full p-4 mb-4 rounded-xl bg-black border border-white/10
-          text-white placeholder-gray-500 focus:outline-none focus:border-[#d4af37]"
-        />
-
-        {error && (
-          <p className="text-red-400 text-sm mb-3">{error}</p>
-        )}
-
-        <button
-          onClick={handleRegister}
-          disabled={loading}
-          className="w-full py-3 rounded-full bg-[#d4af37] text-black font-semibold
-          hover:opacity-90 transition disabled:opacity-60"
+      {/* ================= REGISTER CARD ================= */}
+      <section className="relative flex justify-center px-6">
+        <div
+          className="
+            -mt-45 w-full max-w-md
+            bg-black border border-white/10
+            rounded-2xl p-8
+            shadow-2xl
+          "
         >
-          {loading ? "Creating..." : "Create Account"}
-        </button>
+          <h2 className="text-2xl font-bold text-white mb-6 text-center">
+            Register
+          </h2>
 
-        <p className="mt-6 text-sm text-gray-400 text-center">
-          Already have an account?{" "}
-          <Link href="/login" className="text-[#d4af37]">
-            Login
-          </Link>
-        </p>
-      </div>
-    </section>
+          <input
+            placeholder="Full Name"
+            value={form.name}
+            onChange={(e) =>
+              setForm({ ...form, name: e.target.value })
+            }
+            className="
+              w-full p-4 mb-4 rounded-xl
+              bg-black border border-white/10
+              text-white placeholder-gray-500
+              focus:outline-none focus:border-[#d4af37]
+            "
+          />
+
+          <input
+            type="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={(e) =>
+              setForm({ ...form, email: e.target.value })
+            }
+            className="
+              w-full p-4 mb-4 rounded-xl
+              bg-black border border-white/10
+              text-white placeholder-gray-500
+              focus:outline-none focus:border-[#d4af37]
+            "
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={(e) =>
+              setForm({ ...form, password: e.target.value })
+            }
+            className="
+              w-full p-4 mb-4 rounded-xl
+              bg-black border border-white/10
+              text-white placeholder-gray-500
+              focus:outline-none focus:border-[#d4af37]
+            "
+          />
+
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            value={form.confirmPassword}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                confirmPassword: e.target.value
+              })
+            }
+            className="
+              w-full p-4 mb-4 rounded-xl
+              bg-black border border-white/10
+              text-white placeholder-gray-500
+              focus:outline-none focus:border-[#d4af37]
+            "
+          />
+
+          {error && (
+            <p className="text-red-400 text-sm mb-3">
+              {error}
+            </p>
+          )}
+
+          <button
+            onClick={handleRegister}
+            disabled={loading}
+            className="
+              w-full py-3 rounded-full
+              bg-[#d4af37] text-black
+              font-semibold
+              hover:opacity-90 transition
+              disabled:opacity-60
+            "
+          >
+            {loading ? "Creating..." : "Create Account"}
+          </button>
+
+          <p className="mt-6 text-sm text-gray-400 text-center">
+            Already have an account?{" "}
+            <Link
+              href="/login"
+              className="text-[#d4af37] hover:underline"
+            >
+              Login
+            </Link>
+          </p>
+        </div>
+      </section>
+    </>
   );
 }
