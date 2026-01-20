@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getAllProducts,
+  getFourProducts,
   getProductById,
   getCollections
 } from "../controllers/productController.js";
@@ -14,6 +15,9 @@ router.get("/collections", getCollections);
 
 // List all watches
 router.get("/", getAllProducts);
+
+// List 4 watches under new arrivals
+router.get("/onlyfour", getFourProducts);
 
 // Get single watch
 router.get("/:id", getProductById);

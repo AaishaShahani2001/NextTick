@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Eye, Pencil, XCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
 
+
+
 /* ---------------- TYPES ---------------- */
 type OrderStatus = "Pending" | "Processing" | "Delivered" | "Cancelled";
 
@@ -14,7 +16,11 @@ type Order = {
   totalAmount: number;
   status: OrderStatus;
   cancelledBy: string;
+  discount?: number;
 };
+
+
+
 
 /* ---------------- ORDER TIMELINE ---------------- */
 const OrderTimeline = ({ status }: { status: OrderStatus }) => {
@@ -285,30 +291,49 @@ export default function MyOrdersPage() {
                   <div>
                     <p className="text-sm text-gray-400">Total</p>
                     <p className="text-[#d4af37] font-semibold">
-                      ${order.totalAmount}
+                      LKR {order.totalAmount}
                     </p>
+
+                    {typeof order.discount === "number" && order.discount > 0 && (
+                      <p className="text-xs text-green-400 mt-1">
+                        You saved LKR {order.discount.toLocaleString()}
+                      </p>
+                    )}
                   </div>
 
-                  <div>
+                  <div className="flex items-center gap-2 whitespace-nowrap">
+                    {/* STATUS BADGE */}
                     <span
                       className={`px-4 py-2 rounded-full text-sm font-medium
-    ${order.status === "Delivered"
+      ${order.status === "Delivered"
                           ? "bg-green-500/10 text-green-400"
                           : order.status === "Cancelled"
                             ? "bg-red-500/10 text-red-400"
                             : "bg-yellow-500/10 text-yellow-400"
                         }
-  `}
+    `}
                     >
                       {order.status === "Cancelled"
                         ? order.cancelledBy === "admin"
                           ? "Cancelled by admin"
-                          : order.cancelledBy === "customer"
-                            ? "Cancelled by you"
-                            : "Cancelled"
+                          : "Cancelled by you"
                         : order.status}
                     </span>
+
+                    {/* DISCOUNT BADGE */}
+                    {typeof order.discount === "number" && order.discount > 0 && (
+                      <span
+                        className="
+        px-3 py-1 rounded-full text-xs font-medium
+        bg-green-500/10 text-green-400
+        border border-green-500/20
+      "
+                      >
+                        🎉 Discount Applied
+                      </span>
+                    )}
                   </div>
+
 
                   <div className="flex gap-3 justify-start md:justify-end">
                     <Link

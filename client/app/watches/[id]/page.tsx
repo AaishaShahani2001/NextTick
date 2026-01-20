@@ -59,6 +59,10 @@ export default function WatchDetailsPage() {
     );
   }
 
+  const canPurchase =
+    selectedVariant !== null && selectedVariant.stock > 0;
+
+
   if (!product) {
     return (
       <div className="py-25 text-center">
@@ -214,10 +218,10 @@ export default function WatchDetailsPage() {
           {/* ACTIONS */}
           <div className="mt-10 flex gap-4">
             <button
-              disabled={!selectedVariant || selectedVariant.stock === 0}
+              disabled={!canPurchase}
               onClick={() => {
-                if (!selectedVariant) {
-                  toast.error("Please select a variant");
+                if (!canPurchase) {
+                  toast.error("Please select an available variant");
                   return;
                 }
 
@@ -231,7 +235,7 @@ export default function WatchDetailsPage() {
               }}
               className={`
     px-8 py-3 rounded-full font-semibold transition
-    ${!selectedVariant || selectedVariant.stock === 0
+    ${!canPurchase
                   ? "bg-gray-600 text-gray-300 cursor-not-allowed"
                   : "bg-[#d4af37] text-black hover:opacity-90"
                 }
@@ -241,10 +245,13 @@ export default function WatchDetailsPage() {
             </button>
 
 
-            <Link href="/checkout"
-              onClick={() => {
-                if (!selectedVariant) {
-                  toast.error("Please select a variant");
+
+            <Link
+              href={canPurchase ? "/checkout" : "#"}
+              onClick={(e) => {
+                if (!canPurchase) {
+                  e.preventDefault();
+                  toast.error("Please select an available variant");
                   return;
                 }
 
@@ -253,18 +260,24 @@ export default function WatchDetailsPage() {
                   quantity: 1,
                   selectedVariant
                 });
-
-
               }}
-              className="px-8 py-3 rounded-full border border-[#d4af37]
-    text-[#d4af37] hover:bg-[#d4af37] hover:text-black transition"
+              className={`
+    px-8 py-3 rounded-full border font-semibold transition
+    ${!canPurchase
+                  ? "border-gray-600 text-gray-400 cursor-not-allowed"
+                  : "border-[#d4af37] text-[#d4af37] hover:bg-[#d4af37] hover:text-black"
+                }
+  `}
             >
               Buy Now
             </Link>
 
+
           </div>
 
-          <p className="mt-2 text-red-200">Select your favourite/suitable variants before adding to the cart</p>
+          <p className="mt-2 text-sm text-gray-400">
+            Please select an available variant before adding to cart or buying.
+          </p>
 
           {/* VARIANTS */}
           <div className="mt-16">

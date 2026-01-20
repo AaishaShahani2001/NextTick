@@ -44,6 +44,49 @@ export default function Hero() {
               View Collections
             </a>
           </div>
+
+          {/* STATS */}
+          <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-xl">
+            {/* STAT 1 */}
+            <div className="bg-black/40 backdrop-blur-md
+    border border-white/10 rounded-2xl p-6 text-center">
+              <p className="text-4xl font-bold
+      bg-linear-to-r from-[#d4af37] to-[#f5e7b2]
+      bg-clip-text text-transparent">
+                500+
+              </p>
+              <p className="mt-2 text-sm text-gray-300 tracking-wide">
+                Premium Watches
+              </p>
+            </div>
+
+            {/* STAT 2 */}
+            <div className="bg-black/40 backdrop-blur-md
+    border border-white/10 rounded-2xl p-6 text-center">
+              <p className="text-4xl font-bold
+      bg-linear-to-r from-[#d4af37] to-[#f5e7b2]
+      bg-clip-text text-transparent">
+                10K+
+              </p>
+              <p className="mt-2 text-sm text-gray-300 tracking-wide">
+                Happy Customers
+              </p>
+            </div>
+
+            {/* STAT 3 */}
+            <div className="bg-black/40 backdrop-blur-md
+    border border-white/10 rounded-2xl p-6 text-center">
+              <p className="text-4xl font-bold
+      bg-linear-to-r from-[#d4af37] to-[#f5e7b2]
+      bg-clip-text text-transparent">
+                15+
+              </p>
+              <p className="mt-2 text-sm text-gray-300 tracking-wide">
+                Years Experience
+              </p>
+            </div>
+          </div>
+
         </div>
 
         {/* RIGHT SIDE (optional empty for balance) */}

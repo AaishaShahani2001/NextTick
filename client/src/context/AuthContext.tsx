@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type User = {
   id: string;
@@ -22,10 +23,12 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({
+  
   children
 }: {
   children: React.ReactNode;
 }) => {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -54,8 +57,9 @@ export const AuthProvider = ({
       setIsLoggedIn(true);
     } catch {
       localStorage.removeItem("token");
-      logout();
+      setUser(null);
       setIsLoggedIn(false);
+      router.replace("/login"); 
     } finally {
       setLoading(false);
 
@@ -78,6 +82,7 @@ export const AuthProvider = ({
     localStorage.removeItem("token");
     setUser(null);
     setIsLoggedIn(false);
+  router.replace("/login");
   };
 
   // if (loading) {
