@@ -103,7 +103,7 @@ export default function OrderDetailsPage() {
               Total Amount
             </p>
             <p className="text-2xl font-bold text-[#d4af37]">
-              ${order.totalAmount}
+              LKR {order.totalAmount}
             </p>
           </div>
         </div>

@@ -4,6 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/src/context/CartContext";
 import toast from "react-hot-toast";
+import { DISCOUNT_THRESHOLD, DISCOUNT_PERCENT } from "@/src/constants/discount";
+import Image from "next/image";
+
+
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -13,7 +17,11 @@ export default function CheckoutPage() {
     name: "",
     email: "",
     address: "",
-    phone: ""
+    phone: "",
+    city: "",
+    province: "",
+    country: "",
+    postalCode: ""
   });
 
   const [loading, setLoading] = useState(false);
@@ -26,8 +34,16 @@ export default function CheckoutPage() {
     );
   }, 0);
 
+  // Calculate discount
+  const discount =
+    subtotal >= DISCOUNT_THRESHOLD
+      ? (subtotal * DISCOUNT_PERCENT) / 100
+      : 0;
 
-  // 🔒 Redirect if cart empty
+  const totalAfterDiscount = subtotal - discount;
+
+
+  // Redirect if cart empty
   useEffect(() => {
     const orderPlaced = sessionStorage.getItem("orderSuccess");
     if (cart.length === 0 && !orderPlaced) {
@@ -40,7 +56,7 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
-    if (!form.name || !form.email || !form.address || !form.phone) {
+    if (!form.name || !form.email || !form.address || !form.phone || !form.city || !form.postalCode || !form.province || !form.country) {
       toast.error("Please fill all fields");
       return;
     }
@@ -68,7 +84,9 @@ export default function CheckoutPage() {
               "/placeholder-watch.jpg"
           })),
           shippingAddress: form,
-          totalAmount: subtotal
+          subtotal,
+          discount,
+          totalAmount: totalAfterDiscount
         })
       });
 
@@ -106,72 +124,159 @@ export default function CheckoutPage() {
 
 
   return (
-    <section className="max-w-7xl mx-auto px-6 md:px-12 py-20">
-      <h1 className="text-4xl font-bold text-white mb-12">
+    <section className="max-w-7xl mx-auto px-6 md:px-12 py-24">
+      <h1 className="text-4xl font-bold text-white mb-14 tracking-wide">
         Checkout
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-        {/* FORM */}
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold text-white">
-            Customer Details
+        {/* ================= LEFT: SHIPPING DETAILS ================= */}
+        <div className="bg-black/80 border border-white/10 rounded-3xl p-8 md:p-10 space-y-8 backdrop-blur">
+          <h2 className="text-2xl font-semibold text-white tracking-wide">
+            Shipping Details
           </h2>
 
-          {["name", "email", "phone", "address"].map((field) => (
-            <input
-              key={field}
-              name={field}
-              placeholder={
-                field.charAt(0).toUpperCase() + field.slice(1)
-              }
-              value={(form as any)[field]}
-              onChange={handleChange}
-              className="w-full p-4 rounded-xl bg-black border border-white/10
-              text-white placeholder-gray-500 focus:outline-none
-              focus:border-[#d4af37]"
-            />
-          ))}
+          {/* BASIC INFO */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {["name", "email", "phone"].map((field) => (
+              <input
+                key={field}
+                name={field}
+                placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                value={(form as any)[field]}
+                onChange={handleChange}
+                className="w-full px-5 py-4 rounded-xl bg-black
+              border border-white/10 text-white placeholder-gray-500
+              focus:outline-none focus:border-[#d4af37] transition"
+              />
+            ))}
+          </div>
+
+          {/* ADDRESS */}
+          <input
+            name="address"
+            placeholder="Street Address"
+            value={form.address}
+            onChange={handleChange}
+            className="w-full px-5 py-4 rounded-xl bg-black
+          border border-white/10 text-white placeholder-gray-500
+          focus:outline-none focus:border-[#d4af37]"
+          />
+
+          {/* LOCATION */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {["city", "province", "postalCode", "country"].map((field) => (
+              <input
+                key={field}
+                name={field}
+                placeholder={
+                  field === "postalCode"
+                    ? "Postal Code"
+                    : field.charAt(0).toUpperCase() + field.slice(1)
+                }
+                value={(form as any)[field]}
+                onChange={handleChange}
+                className="w-full px-5 py-4 rounded-xl bg-black
+              border border-white/10 text-white placeholder-gray-500
+              focus:outline-none focus:border-[#d4af37]"
+              />
+            ))}
+          </div>
         </div>
 
-        {/* SUMMARY */}
-        <div className="bg-black border border-white/10 rounded-2xl p-8 h-fit">
-          <h2 className="text-xl font-semibold text-white mb-6">
+        {/* ================= RIGHT: ORDER SUMMARY ================= */}
+        <div className="bg-black/80 border border-white/10 rounded-3xl p-8 md:p-10 h-fit backdrop-blur">
+          <h2 className="text-2xl font-semibold text-white mb-8 tracking-wide">
             Order Summary
           </h2>
 
-          {cart.map((item) => (
-            <div
-              key={item.product._id}
-              className="flex justify-between text-gray-400 mb-3"
-            >
-              <span>
-                {item.product.name} ({item.selectedVariant.color},{" "}
-                {item.selectedVariant.sizeMM}mm) × {item.quantity}
-              </span>
-              <span>
-                ${(item.product.basePrice * item.quantity).toFixed(2)}
-              </span>
-            </div>
-          ))}
+          <div className="space-y-6">
+            {cart.map((item) => {
+              const image =
+                Object.values(item.product.images ?? {})[0] ||
+                "/placeholder-watch.jpg";
 
+              return (
+                <div
+                  key={item.product._id}
+                  className="flex items-center justify-between gap-4"
+                >
+                  {/* IMAGE + DETAILS */}
+                  <div className="flex items-center gap-4">
+                    {/* IMAGE */}
+                    <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                      <Image
+                        src={image}
+                        alt={item.product.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+
+                    {/* TEXT */}
+                    <div>
+                      <p className="text-white font-medium">
+                        {item.product.name}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {item.selectedVariant.strapType} •{" "}
+                        {item.selectedVariant.color} •{" "}
+                        {item.selectedVariant.sizeMM}mm
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Qty: {item.quantity}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* PRICE */}
+                  <p className="text-sm font-semibold text-[#d4af37] whitespace-nowrap">
+                    LKR{" "}
+                    {(
+                      (item.product.basePrice +
+                        item.selectedVariant.priceAdjustment) *
+                      item.quantity
+                    ).toFixed(2)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+
+          {/* DISCOUNT */}
+          {subtotal >= DISCOUNT_THRESHOLD && (
+            <div className="mt-6 flex justify-between text-green-400 text-sm">
+              <span>Discount ({DISCOUNT_PERCENT}%)</span>
+              <span>- LKR {discount.toFixed(2)}</span>
+            </div>
+          )}
+
+          {/* TOTAL */}
           <div className="border-t border-white/10 mt-6 pt-6 flex justify-between text-lg font-bold text-white">
             <span>Total</span>
             <span className="text-[#d4af37]">
-              ${subtotal.toFixed(2)}
+              LKR {totalAfterDiscount.toFixed(2)}
             </span>
           </div>
 
+          {/* CTA */}
           <button
             onClick={handlePlaceOrder}
             disabled={loading}
-            className="mt-8 w-full py-3 rounded-full bg-[#d4af37]
-            text-black font-semibold hover:opacity-90 transition"
+            className="mt-10 w-full py-4 rounded-full bg-[#d4af37]
+          text-black font-semibold tracking-wide
+          hover:opacity-90 transition disabled:opacity-60"
           >
-            {loading ? "Placing Order..." : "Place Order"}
+            {loading ? "Placing Order..." : "Confirm & Place Order"}
           </button>
+
+          <p className="mt-4 text-xs text-gray-500 text-center">
+            Secure checkout · Cash on Delivery
+          </p>
         </div>
       </div>
     </section>
   );
+
 }

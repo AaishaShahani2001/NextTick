@@ -5,10 +5,21 @@ import Product from "../models/Product.js";
 
 const router = express.Router();
 
+const DISCOUNT_THRESHOLD = 300000;
+const DISCOUNT_PERCENT = 5;
+
 /* ================= CREATE ORDER ================= */
 router.post("/", authMiddleware, async (req, res) => {
   try {
-    const { items, shippingAddress, totalAmount } = req.body;
+    const { items, shippingAddress } = req.body;
+
+    const { name, email, phone, address, city, province, country, postalCode } = shippingAddress || {};
+
+    if (!name || !email || !phone || !address || !city || !postalCode || !province || !country) {
+      return res.status(400).json({
+        message: "Incomplete shipping address"
+      });
+    }
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: "No items in order" });
@@ -54,12 +65,28 @@ router.post("/", authMiddleware, async (req, res) => {
       );
     }
 
+    // Calculate subtotal from items
+    const subtotal = items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+
+    let discount = 0;
+    if (subtotal >= DISCOUNT_THRESHOLD) {
+      discount = (subtotal * DISCOUNT_PERCENT) / 100;
+    }
+
+    const finalTotal = subtotal - discount;
+
+
     // Create order
     const order = new Order({
       user: req.user._id,
       items,
       shippingAddress,
-      totalAmount,
+      subtotal,
+      discount,
+      totalAmount: finalTotal,
       paymentMethod: "COD"
     });
 
@@ -82,7 +109,7 @@ router.get("/my", authMiddleware, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
       .sort({ createdAt: -1 })
-      .select("_id totalAmount status createdAt cancelledBy");
+      .select("_id totalAmount status createdAt cancelledBy discount");
 
     res.json(orders);
   } catch (error) {
@@ -165,7 +192,7 @@ router.put("/:id/cancel", authMiddleware, async (req, res) => {
       );
     }
 
-    order.status = "Cancelled";
+
     await order.save();
 
     res.json({ message: "Order cancelled successfully" });
