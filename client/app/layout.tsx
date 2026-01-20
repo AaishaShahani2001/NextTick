@@ -60,7 +60,7 @@ export default function RootLayout({
               <Navbar products={products} />
             )}
 
-            <main className={!isAdminRoute ? "pt-24" : ""}>
+            <main className={!isAdminRoute ? "pt-16" : ""}>
               {children}
             </main>
 

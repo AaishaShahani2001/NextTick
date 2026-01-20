@@ -86,7 +86,7 @@ const productSchema = new mongoose.Schema(
 
     collection: {
       type: String,
-      enum: ["Classic", "Sport", "Luxury", "Limited"],
+      enum: ["Classic", "Sport", "Luxury", "Limited", "SmartWatch"],
     },
 
     variants: {

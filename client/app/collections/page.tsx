@@ -14,7 +14,8 @@ const COLLECTION_META: Record<string, string> = {
   Classic: "Timeless designs crafted with precision and elegance.",
   Sport: "Built for performance, durability, and active lifestyles.",
   Luxury: "Refined timepieces made with premium materials.",
-  Limited: "Exclusive editions produced in limited quantities."
+  Limited: "Exclusive editions produced in limited quantities.",
+  SmartWatch: "bbbbbbbbbbbbbbbbbbbb",
 };
 
 export default function CollectionsPage() {
