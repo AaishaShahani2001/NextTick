@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 
 
 /* ---------------- TYPES ---------------- */
-type OrderStatus = "Pending" | "Processing" | "Delivered" | "Cancelled";
+type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
 
 type Order = {
   _id: string;
@@ -17,14 +17,39 @@ type Order = {
   status: OrderStatus;
   cancelledBy: string;
   discount?: number;
+  courier?: {
+    name: string;
+    trackingId: string;
+    shippedAt?: string;
+  };
 };
 
+// const statusColors = {
+//   Pending: "bg-gray-200 text-gray-700",
+//   Processing: "bg-yellow-100 text-yellow-700",
+//   Shipped: "bg-blue-500/10 text-blue-400",
+//   Delivered: "bg-green-500/10 text-green-400",
+//   Cancelled: "bg-red-100 text-red-700",
+// };
+
+const courierTrackingUrls: Record<string, (id: string) => string> = {
+  DHL: (id) =>
+    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+  FedEx: (id) =>
+    `https://www.fedex.com/fedextrack/?tracknumbers=${id}`,
+  UPS: (id) =>
+    `https://www.ups.com/track?tracknum=${id}`,
+  Aramex: (id) =>
+    `https://www.aramex.com/track/results?ShipmentNumber=${id}`,
+  "Sri Lanka Post": (id) =>
+    `https://www.slpost.gov.lk/track/?id=${id}`
+};
 
 
 
 /* ---------------- ORDER TIMELINE ---------------- */
 const OrderTimeline = ({ status }: { status: OrderStatus }) => {
-  const steps: OrderStatus[] = ["Pending", "Processing", "Delivered"];
+  const steps: OrderStatus[] = ["Pending", "Processing", "Shipped", "Delivered"];
 
   return (
     <div className="flex items-center gap-3 mt-4">
@@ -173,6 +198,25 @@ export default function MyOrdersPage() {
     );
   };
 
+  /* ---------------- COURIER AND TRACKING ---------------- */
+  const handleTrackPackage = (order: Order) => {
+    if (!order.courier) {
+      toast.error("Tracking information not available yet");
+      return;
+    }
+
+    const { name, trackingId } = order.courier;
+
+    const tracker = courierTrackingUrls[name];
+    if (!tracker) {
+      toast("Courier tracking page not available", { icon: "📦" });
+      return;
+    }
+
+    window.open(tracker(trackingId), "_blank");
+  };
+
+
   const confirmCancel = (orderId: string) => {
     setSelectedOrder(orderId);
     setShowModal(true);
@@ -263,7 +307,7 @@ export default function MyOrdersPage() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {orders.map((order) => {
             const isEditable = order.status === "Pending" && order.cancelledBy !== "admin";
 
@@ -305,13 +349,16 @@ export default function MyOrdersPage() {
                     {/* STATUS BADGE */}
                     <span
                       className={`px-4 py-2 rounded-full text-sm font-medium
-      ${order.status === "Delivered"
-                          ? "bg-green-500/10 text-green-400"
-                          : order.status === "Cancelled"
-                            ? "bg-red-500/10 text-red-400"
-                            : "bg-yellow-500/10 text-yellow-400"
-                        }
-    `}
+  ${order.status === "Pending"
+                          ? "bg-gray-500/10 text-gray-400"
+                          : order.status === "Processing"
+                            ? "bg-yellow-500/10 text-yellow-400"
+                            : order.status === "Shipped"
+                              ? "bg-blue-500/10 text-blue-400"
+                              : order.status === "Delivered"
+                                ? "bg-green-500/10 text-green-400"
+                                : "bg-red-500/10 text-red-400"
+                        }`}
                     >
                       {order.status === "Cancelled"
                         ? order.cancelledBy === "admin"
@@ -375,6 +422,51 @@ export default function MyOrdersPage() {
                     </button>
                   </div>
                 </div>
+
+
+                {/* ===== SHIPPING / DELIVERY CARD (SEPARATE ROW) ===== */}
+                {order.courier?.trackingId && (
+                  <div
+                    className={`mt-5 flex justify-end`}
+                  >
+                    <div
+                      className={`w-full md:w-90 rounded-xl border p-4
+                  ${order.status === "Delivered"
+                          ? "border-green-500/20 bg-green-500/5"
+                          : "border-white/10 bg-black/40"
+                        }`}
+                    >
+                      <p className="text-sm text-gray-400">
+                        Courier:{" "}
+                        <span className="text-white font-medium">
+                          {order.courier.name}
+                        </span>
+                      </p>
+                      <p className="text-sm text-gray-400 mt-1">
+                        Tracking ID:{" "}
+                        <span className="text-[#d4af37] font-semibold">
+                          {order.courier.trackingId}
+                        </span>
+                      </p>
+
+                      {order.status === "Delivered" ? (
+                        <p className="mt-2 text-sm text-green-400">
+                          ✅ Package delivered successfully
+                        </p>
+                      ) : (
+                        <button
+                          onClick={() => handleTrackPackage(order)}
+                          className="mt-3 w-full px-4 py-2 rounded-full text-sm font-semibold
+                      bg-[#d4af37] text-black hover:opacity-90"
+                        >
+                          🚚 Track Package
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+
 
                 <OrderTimeline status={order.status} />
 

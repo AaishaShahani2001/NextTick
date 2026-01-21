@@ -15,8 +15,11 @@ type Order = {
   _id: string;
   items: OrderItem[];
   totalAmount: number;
-  status: "Processing" | "Delivered" | "Cancelled";
+  status: "Processing" | "Shipped" | "Delivered" | "Cancelled";
+  trackingId?: string;
+  courier?: string;
   createdAt: string;
+
 };
 
 export default function OrderDetailsPage() {
@@ -88,13 +91,12 @@ export default function OrderDetailsPage() {
           <div className="flex flex-col items-start md:items-end">
             <span
               className={`px-5 py-2 rounded-full text-sm font-semibold
-              ${
-                order.status === "Delivered"
+              ${order.status === "Delivered"
                   ? "bg-green-500/10 text-green-400"
                   : order.status === "Cancelled"
-                  ? "bg-red-500/10 text-red-400"
-                  : "bg-yellow-500/10 text-yellow-400"
-              }`}
+                    ? "bg-red-500/10 text-red-400"
+                    : "bg-yellow-500/10 text-yellow-400"
+                }`}
             >
               {order.status}
             </span>
@@ -107,6 +109,32 @@ export default function OrderDetailsPage() {
             </p>
           </div>
         </div>
+
+        {/* SHIPPING & TRACKING */}
+        {order.trackingId && (
+          <div className="mt-8 rounded-2xl border border-white/10 bg-black/50 p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Shipping Information
+            </h3>
+
+            <div className="grid gap-2 text-sm">
+              <p className="text-gray-400">
+                Courier:
+                <span className="ml-2 text-white font-medium">
+                  {order.courier}
+                </span>
+              </p>
+
+              <p className="text-gray-400">
+                Tracking ID:
+                <span className="ml-2 text-[#d4af37] font-semibold tracking-wide">
+                  {order.trackingId}
+                </span>
+              </p>
+            </div>
+          </div>
+        )}
+
 
         {/* ITEMS */}
         <div className="border-t border-white/10 pt-6">
@@ -135,7 +163,7 @@ export default function OrderDetailsPage() {
         <div className="border-t border-white/10 pt-6 flex gap-4 items-start">
           <Headphones className="text-[#d4af37]" />
           <p className="text-sm text-gray-400 leading-relaxed">
-            Need to modify or cancel this order?  
+            Need to modify or cancel this order?
             Once an order is confirmed, changes must be handled by our support team.
             Please contact us via phone or email for assistance.
           </p>

@@ -50,6 +50,28 @@ router.get("/", adminMiddleware, async (req, res) => {
   res.json(orders);
 });
 
+
+/* ================= ASSIGN COURIER TRACKING ================= */
+router.put("/:id/courier", adminMiddleware, async (req, res) => {
+  const { name, trackingId } = req.body;
+
+  const order = await Order.findById(req.params.id);
+  if (!order) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  order.courier = {
+    name,
+    trackingId,
+    shippedAt: null
+  };
+
+  await order.save();
+  res.json(order);
+});
+
+
+
 /* ================= UPDATE STATUS  ================= */
 router.put("/:id/status", adminMiddleware, async (req, res) => {
   try {
@@ -67,19 +89,35 @@ router.put("/:id/status", adminMiddleware, async (req, res) => {
       });
     }
 
-    const statusFlow = ["Pending", "Processing", "Delivered"];
+    const statusFlow = ["Pending", "Processing", "Shipped", "Delivered"];
 
     // Allow cancel from ANY non-final state
     if (newStatus === "Cancelled") {
-      if (order.status === "Delivered") {
+      if (order.status === "Shipped") {
         return res.status(400).json({
-          message: "Delivered orders cannot be cancelled"
+          message: "Shipped orders cannot be cancelled"
         });
+      }
+
+      // RESTORE STOCK if cancelling from Processing
+      if (order.status === "Processing") {
+        for (const item of order.items) {
+          const product = await Product.findById(item.productId);
+          if (!product) continue;
+
+          const variant = product.variants.find(v => v.sku === item.sku);
+          if (!variant) continue;
+
+          variant.stock += item.quantity;
+          variant.isAvailable = true;
+
+          await product.save();
+        }
       }
 
       order.status = "Cancelled";
       order.cancelledBy = "admin";
-      
+
       await order.save();
 
       return res.json(order);
@@ -108,7 +146,7 @@ router.put("/:id/status", adminMiddleware, async (req, res) => {
     }
 
     // STOCK DEDUCTION 
-    if (newStatus === "Delivered") {
+    if (newStatus === "Processing") {
       for (const item of order.items) {
         const product = await Product.findById(item.productId);
         if (!product) continue;
@@ -140,6 +178,18 @@ router.put("/:id/status", adminMiddleware, async (req, res) => {
         await product.save();
       }
     }
+
+    // ================= SHIPPED =================
+    if (newStatus === "Shipped") {
+      if (!order.courier || !order.courier.trackingId) {
+        return res.status(400).json({
+          message: "Assign courier & tracking ID before shipping"
+        });
+      }
+
+      order.courier.shippedAt = new Date();
+    }
+
 
     order.status = newStatus;
     await order.save();
