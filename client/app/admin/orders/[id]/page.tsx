@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 /* ---------------- TYPES ---------------- */
-type OrderStatus = "Pending" | "Processing" | "Delivered" | "Cancelled";
+type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
 
 type OrderItem = {
   name: string;
@@ -35,11 +35,13 @@ type Order = {
   };
   discount?: number;
   subtotal?: number;
+  courier: string;
+  trackingId : string;
 };
 
 /* ---------------- TIMELINE ---------------- */
 const OrderTimeline = ({ status }: { status: OrderStatus }) => {
-  const steps: OrderStatus[] = ["Pending", "Processing", "Delivered"];
+  const steps: OrderStatus[] = ["Pending", "Processing", "Shipped", "Delivered"];
 
   return (
     <div className="flex items-center gap-4 mt-4">
@@ -75,7 +77,8 @@ const OrderTimeline = ({ status }: { status: OrderStatus }) => {
 /* ---------------- STATUS FLOW ---------------- */
 const getAllowedNextStatuses = (status: OrderStatus) => {
   if (status === "Pending") return ["Processing"];
-  if (status === "Processing") return ["Delivered"];
+  if (status === "Processing") return ["Shipped"];
+  if (status === "Shipped") return ["Delivered"];
   return [];
 };
 
@@ -117,6 +120,33 @@ export default function AdminOrderDetailPage() {
     fetchOrder();
   }, [id, router]);
 
+  const saveCourierDetails = async () => {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(
+    `http://localhost:3000/api/admin/orders/${id}/courier`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        courier: order?.courier,
+        trackingId: order?.trackingId
+      })
+    }
+  );
+
+  if (!res.ok) {
+    toast.error("Failed to save courier details");
+    return;
+  }
+
+  toast.success("Courier details updated");
+};
+
+
   /* ---------------- UPDATE STATUS ---------------- */
   const updateStatus = async (newStatus: OrderStatus) => {
     try {
@@ -157,137 +187,174 @@ export default function AdminOrderDetailPage() {
   if (!order) return null;
 
   return (
-  <section className="max-w-6xl mx-auto px-2 py-5">
-    <h1 className="text-3xl font-bold text-white mb-10">
-      Order Details
-    </h1>
+    <section className="max-w-6xl mx-auto px-2 py-5">
+      <h1 className="text-3xl font-bold text-white mb-10">
+        Order Details
+      </h1>
 
-    <div className="bg-black border border-white/10 rounded-3xl p-8 space-y-10">
+      <div className="bg-black border border-white/10 rounded-3xl p-8 space-y-10">
 
-      {/* ================= SUMMARY HEADER ================= */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div>
-          <p className="text-xs text-gray-400 uppercase">Order ID</p>
-          <p className="text-white break-all font-medium">{order._id}</p>
-        </div>
-
-        <div>
-          <p className="text-xs text-gray-400 uppercase">Placed On</p>
-          <p className="text-white">
-            {new Date(order.createdAt).toLocaleString()}
-          </p>
-        </div>
-
-        <div>
-          <p className="text-xs text-gray-400 uppercase">Customer</p>
-          <p className="text-white font-medium">{order.user.name}</p>
-          <p className="text-xs text-gray-400">{order.user.email}</p>
-        </div>
-
-        <div className="bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-2xl p-4">
-          <p className="text-xs text-[#d4af37] uppercase">Total Amount</p>
-          <p className="text-2xl font-bold text-[#d4af37]">
-            LKR {order.totalAmount}
-          </p>
-
-          {typeof order.discount === "number" && order.discount > 0 && (
-            <p className="text-xs text-green-400 mt-1">
-              Discount applied
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* ================= SHIPPING DETAILS ================= */}
-      <div className="border-t border-white/10 pt-8">
-        <h2 className="text-xl font-semibold text-white mb-6">
-          Shipping Information
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white/5 rounded-2xl p-6 border border-white/10">
-          <div className="text-sm space-y-2">
-            <p className="text-gray-400">Recipient</p>
-            <p className="text-white font-medium">
-              {order.shippingAddress.name}
-            </p>
-
-            <p className="text-gray-400 mt-4">Contact</p>
-            <p className="text-white">{order.shippingAddress.email}</p>
-            <p className="text-white">{order.shippingAddress.phone}</p>
+        {/* ================= SUMMARY HEADER ================= */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div>
+            <p className="text-xs text-gray-400 uppercase">Order ID</p>
+            <p className="text-white break-all font-medium">{order._id}</p>
           </div>
 
-          <div className="text-sm space-y-2">
-            <p className="text-gray-400">Delivery Address</p>
-            <p className="text-white leading-relaxed">
-              {order.shippingAddress.address}<br />
-              {order.shippingAddress.city}, {order.shippingAddress.province}<br />
-              {order.shippingAddress.postalCode}<br />
-              {order.shippingAddress.country}
+          <div>
+            <p className="text-xs text-gray-400 uppercase">Placed On</p>
+            <p className="text-white">
+              {new Date(order.createdAt).toLocaleString()}
             </p>
           </div>
+
+          <div>
+            <p className="text-xs text-gray-400 uppercase">Customer</p>
+            <p className="text-white font-medium">{order.user.name}</p>
+            <p className="text-xs text-gray-400">{order.user.email}</p>
+          </div>
+
+          <div className="bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-2xl p-4">
+            <p className="text-xs text-[#d4af37] uppercase">Total Amount</p>
+            <p className="text-2xl font-bold text-[#d4af37]">
+              LKR {order.totalAmount}
+            </p>
+
+            {typeof order.discount === "number" && order.discount > 0 && (
+              <p className="text-xs text-green-400 mt-1">
+                Discount applied
+              </p>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* ================= ORDER STATUS ================= */}
-      <div className="border-t border-white/10 pt-8">
-        <h2 className="text-xl font-semibold text-white mb-4">
-          Order Progress
-        </h2>
+        {/* ================= SHIPPING DETAILS ================= */}
+        <div className="border-t border-white/10 pt-8">
+          <h2 className="text-xl font-semibold text-white mb-6">
+            Shipping Information
+          </h2>
 
-        {order.status === "Cancelled" ? (
-          <span className="inline-block px-4 py-2 rounded-full bg-red-500/10 text-red-400 border border-red-500/30">
-            Cancelled (Read-only)
-          </span>
-        ) : (
-          <select
-            value={order.status}
-            onChange={(e) =>
-              updateStatus(e.target.value as OrderStatus)
-            }
-            className="bg-black border border-white/20 text-white rounded-xl px-4 py-2"
-          >
-            <option value={order.status}>{order.status}</option>
-            {getAllowedNextStatuses(order.status).map((s) => (
-              <option key={s} value={s}>
-                Move to {s}
-              </option>
-            ))}
-          </select>
-        )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white/5 rounded-2xl p-6 border border-white/10">
+            <div className="text-sm space-y-2">
+              <p className="text-gray-400">Recipient</p>
+              <p className="text-white font-medium">
+                {order.shippingAddress.name}
+              </p>
 
-        <OrderTimeline status={order.status} />
-      </div>
-
-      {/* ================= ITEMS ================= */}
-      <div className="border-t border-white/10 pt-8">
-        <h2 className="text-xl font-semibold text-white mb-6">
-          Ordered Items
-        </h2>
-
-        <div className="space-y-3">
-          {order.items.map((item, idx) => (
-            <div
-              key={idx}
-              className="flex justify-between items-center p-4 rounded-xl bg-white/5 border border-white/10"
-            >
-              <span className="text-white">
-                {item.name} × {item.quantity}
-              </span>
-              <span className="text-[#d4af37] font-medium">
-                LKR {(item.price * item.quantity).toFixed(2)}
-              </span>
+              <p className="text-gray-400 mt-4">Contact</p>
+              <p className="text-white">{order.shippingAddress.email}</p>
+              <p className="text-white">{order.shippingAddress.phone}</p>
             </div>
-          ))}
+
+            <div className="text-sm space-y-2">
+              <p className="text-gray-400">Delivery Address</p>
+              <p className="text-white leading-relaxed">
+                {order.shippingAddress.address}<br />
+                {order.shippingAddress.city}, {order.shippingAddress.province}<br />
+                {order.shippingAddress.postalCode}<br />
+                {order.shippingAddress.country}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* COURIER & TRACKING */}
+        <div className="border-t border-white/10 pt-6 space-y-4">
+          <h2 className="text-xl text-white">Courier & Tracking</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              placeholder="Courier Name (DHL, FedEx, PickMe, etc.)"
+              value={order.courier || ""}
+              onChange={(e) =>
+                setOrder((prev) =>
+                  prev ? { ...prev, courier: e.target.value } : prev
+                )
+              }
+              className="px-4 py-3 rounded-xl bg-black border border-white/10 text-white"
+            />
+
+            <input
+              placeholder="Tracking ID"
+              value={order.trackingId || ""}
+              onChange={(e) =>
+                setOrder((prev) =>
+                  prev ? { ...prev, trackingId: e.target.value } : prev
+                )
+              }
+              className="px-4 py-3 rounded-xl bg-black border border-white/10 text-white"
+            />
+          </div>
+
+          <button
+            onClick={saveCourierDetails}
+            className="mt-4 px-6 py-3 rounded-full bg-[#d4af37] text-black font-semibold"
+          >
+            Save Courier Details
+          </button>
+        </div>
+
+
+        {/* ================= ORDER STATUS ================= */}
+        <div className="border-t border-white/10 pt-8">
+          <h2 className="text-xl font-semibold text-white mb-4">
+            Order Progress
+          </h2>
+
+          {order.status === "Cancelled" ? (
+            <span className="inline-block px-4 py-2 rounded-full bg-red-500/10 text-red-400 border border-red-500/30">
+              Cancelled (Read-only)
+            </span>
+          ) : (
+            <select
+              value={order.status}
+              onChange={(e) =>
+                updateStatus(e.target.value as OrderStatus)
+              }
+              className="bg-black border border-white/20 text-white rounded-xl px-4 py-2"
+            >
+              <option value={order.status}>{order.status}</option>
+              {getAllowedNextStatuses(order.status).map((s) => (
+                <option key={s} value={s}>
+                  Move to {s}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <OrderTimeline status={order.status} />
+        </div>
+
+        {/* ================= ITEMS ================= */}
+        <div className="border-t border-white/10 pt-8">
+          <h2 className="text-xl font-semibold text-white mb-6">
+            Ordered Items
+          </h2>
+
+          <div className="space-y-3">
+            {order.items.map((item, idx) => (
+              <div
+                key={idx}
+                className="flex justify-between items-center p-4 rounded-xl bg-white/5 border border-white/10"
+              >
+                <span className="text-white">
+                  {item.name} × {item.quantity}
+                </span>
+                <span className="text-[#d4af37] font-medium">
+                  LKR {(item.price * item.quantity).toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ================= FOOTER NOTE ================= */}
+        <div className="border-t border-white/10 pt-6 text-xs text-gray-400">
+          Cancelled orders are immutable audit records.
+          Status transitions are strictly forward-only to preserve order integrity.
         </div>
       </div>
-
-      {/* ================= FOOTER NOTE ================= */}
-      <div className="border-t border-white/10 pt-6 text-xs text-gray-400">
-        Cancelled orders are immutable audit records.  
-        Status transitions are strictly forward-only to preserve order integrity.
-      </div>
-    </div>
-  </section>
-);
+    </section>
+  );
 
 }

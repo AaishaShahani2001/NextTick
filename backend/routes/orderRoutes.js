@@ -109,7 +109,7 @@ router.get("/my", authMiddleware, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
       .sort({ createdAt: -1 })
-      .select("_id totalAmount status createdAt cancelledBy discount");
+      //.select("_id totalAmount status createdAt cancelledBy discount");
 
     res.json(orders);
   } catch (error) {

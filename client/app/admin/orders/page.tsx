@@ -9,7 +9,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 /* ---------------- TYPES ---------------- */
-type OrderStatus = "Pending" | "Processing" | "Delivered" | "Cancelled";
+type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
 
 type Order = {
   _id: string;
@@ -27,13 +27,24 @@ type Order = {
 const STATUS_OPTIONS: OrderStatus[] = [
   "Pending",
   "Processing",
+  "Shipped",
   "Delivered",
   "Cancelled"
 ];
 
+const statusColors = {
+  Pending: "bg-gray-200 text-gray-700",
+  Processing: "bg-yellow-100 text-yellow-700",
+  Shipped: "bg-blue-100 text-blue-700",
+  Delivered: "bg-green-100 text-green-700",
+  Cancelled: "bg-red-100 text-red-700",
+};
+
+
 const getAllowedNextStatuses = (status: OrderStatus) => {
   if (status === "Pending") return ["Processing", "Cancelled"];
-  if (status === "Processing") return ["Delivered", "Cancelled"];
+  if (status === "Processing") return ["Shipped", "Cancelled"];
+  if (status === "Shipped") return ["Delivered", "Cancelled"];
   return [];
 };
 
@@ -53,6 +64,14 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<OrderFilter>("all");
   const [dateFilter, setDateFilter] = useState("");
   const [page, setPage] = useState(1);
+
+  /* ---------------- COURIER MODAL ---------------- */
+  const [showCourierModal, setShowCourierModal] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  const [courierName, setCourierName] = useState("");
+  const [trackingId, setTrackingId] = useState("");
+
 
   /* ---------------- FETCH ORDERS ---------------- */
   useEffect(() => {
@@ -116,6 +135,58 @@ export default function AdminOrdersPage() {
       toast.error(err.message || "Status update failed");
     }
   };
+
+  /* ---------------- ASSIGN COURIER ---------------- */
+  const openCourierModal = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setCourierName("");
+    setTrackingId("");
+    setShowCourierModal(true);
+  };
+
+  const assignCourierAndShip = async () => {
+    if (!courierName || !trackingId || !selectedOrderId) {
+      toast.error("Courier name & tracking ID required");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+
+      //Assign courier
+      const courierRes = await fetch(
+        `http://localhost:3000/api/admin/orders/${selectedOrderId}/courier`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: courierName,
+            trackingId
+          })
+        }
+      );
+
+      if (!courierRes.ok) {
+        const text = await courierRes.text();
+        throw new Error(text || "Courier assign failed");
+      }
+
+      const courierData = await courierRes.json();
+      if (!courierRes.ok) throw new Error(courierData.message);
+
+      //  Update status to Shipped
+      await updateStatus(selectedOrderId, "Shipped");
+
+      toast.success("Courier assigned & order shipped");
+      setShowCourierModal(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to ship order");
+    }
+  };
+
 
   /* ---------------- FILTER LOGIC ---------------- */
   const filteredOrders = useMemo(() => {
@@ -372,9 +443,16 @@ export default function AdminOrdersPage() {
                     ) : (
                       <select
                         value={o.status}
-                        onChange={(e) =>
-                          updateStatus(o._id, e.target.value as OrderStatus)
-                        }
+                        onChange={(e) => {
+                          const nextStatus = e.target.value as OrderStatus;
+
+                          if (nextStatus === "Shipped") {
+                            openCourierModal(o._id);
+                          } else {
+                            updateStatus(o._id, nextStatus);
+                          }
+                        }}
+
                         className="bg-black border border-white/20
         text-white text-sm rounded-lg px-3 py-1"
                       >
@@ -444,6 +522,54 @@ export default function AdminOrdersPage() {
           </div>
         )}
       </div>
+
+
+      {showCourierModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="bg-[#0b0b0b] border border-white/10 rounded-2xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold text-white mb-4">
+              Assign Courier
+            </h2>
+
+            <div className="space-y-4">
+              <input
+                placeholder="Courier name (e.g. DHL, FedEx)"
+                value={courierName}
+                onChange={(e) => setCourierName(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg bg-black
+          border border-white/20 text-white text-sm"
+              />
+
+              <input
+                placeholder="Tracking ID / AWB Number"
+                value={trackingId}
+                onChange={(e) => setTrackingId(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg bg-black
+          border border-white/20 text-white text-sm"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowCourierModal(false)}
+                className="px-4 py-2 rounded-lg text-sm text-gray-400
+          hover:text-white"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={assignCourierAndShip}
+                className="px-5 py-2 rounded-lg text-sm font-semibold
+          bg-[#d4af37] text-black hover:opacity-90"
+              >
+                Assign & Ship
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 }

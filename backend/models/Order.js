@@ -40,13 +40,11 @@ const orderSchema = new mongoose.Schema(
     },
 
     courier: {
-      type: String,
-      default: null
+      name: { type: String },
+      trackingId: { type: String },
+      shippedAt: { type: Date }
     },
-    trackingId: {
-      type: String,
-      default: null
-    },
+
 
 
     subtotal: {
@@ -66,7 +64,7 @@ const orderSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Pending", "Processing", "Delivered", "Cancelled"],
+      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
       default: "Pending"
     },
 
