@@ -16,6 +16,8 @@ export default function WatchDetailsPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const isLoggedIn = typeof window !== "undefined" && !!localStorage.getItem("token");
+
   const [selectedVariant, setSelectedVariant] =
     useState<Product["variants"][0] | null>(null);
 
@@ -60,7 +62,8 @@ export default function WatchDetailsPage() {
   }
 
   const canPurchase =
-    selectedVariant !== null && selectedVariant.stock > 0;
+    selectedVariant !== null && selectedVariant.stock > 0 && isLoggedIn;
+
 
 
   if (!product) {
@@ -220,6 +223,10 @@ export default function WatchDetailsPage() {
             <button
               disabled={!canPurchase}
               onClick={() => {
+                if (!isLoggedIn) {
+                  toast.error("Please login to add items to your cart");
+                  return;
+                }
                 if (!canPurchase) {
                   toast.error("Please select an available variant");
                   return;
@@ -247,8 +254,13 @@ export default function WatchDetailsPage() {
 
 
             <Link
-              href={canPurchase ? "/checkout" : "#"}
+              href={canPurchase && isLoggedIn ? "/checkout" : "#"}
               onClick={(e) => {
+                if (!isLoggedIn) {
+                  e.preventDefault();
+                  toast.error("Please login to continue with purchase");
+                  return;
+                }
                 if (!canPurchase) {
                   e.preventDefault();
                   toast.error("Please select an available variant");
@@ -276,8 +288,11 @@ export default function WatchDetailsPage() {
           </div>
 
           <p className="mt-2 text-sm text-gray-400">
-            Please select an available variant before adding to cart or buying.
+            {!isLoggedIn
+              ? "Please login to add items to cart or buy."
+              : "Please select an available variant before adding to cart or buying."}
           </p>
+
 
           {/* VARIANTS */}
           <div className="mt-16">

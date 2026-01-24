@@ -77,7 +77,28 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: ["customer", "admin"],
       default: null
-    }
+    },
+
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+          required: true
+        },
+        at: {
+          type: Date,
+          default: Date.now
+        },
+        comment: {
+          type: String, // ← ADMIN NOTE
+          trim: true,
+          default: "admin"
+        }
+      }
+    ],
+
+
 
   },
   { timestamps: true }

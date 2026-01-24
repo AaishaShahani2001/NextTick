@@ -1,9 +1,18 @@
 "use client";
-
+import React from "react";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PackageCheck, Headphones } from "lucide-react";
+import {
+  PackageCheck,
+  Headphones,
+  Clock,
+  Truck,
+  CheckCircle,
+  XCircle
+} from "lucide-react";
 import toast from "react-hot-toast";
+
+type OrderStatus = "Processing" | "Shipped" | "Delivered" | "Cancelled";
 
 type OrderItem = {
   name: string;
@@ -11,22 +20,43 @@ type OrderItem = {
   price: number;
 };
 
+type StatusHistoryItem = {
+  status: OrderStatus;
+  at: string;
+  comment?: string;
+};
+
 type Order = {
   _id: string;
   items: OrderItem[];
   totalAmount: number;
-  status: "Processing" | "Shipped" | "Delivered" | "Cancelled";
+  status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
   trackingId?: string;
   courier?: string;
   createdAt: string;
+  statusHistory?: StatusHistoryItem[];
 
 };
+
+/* ---------------- STATUS HISTORY (UI LOGIC) ---------------- */
+const statusSteps: {
+  key: OrderStatus;
+  label: string;
+  icon: React.ReactNode;
+}[] = [
+    { key: "Processing", label: "Order Processing", icon: <Clock size={18} /> },
+    { key: "Shipped", label: "Order Shipped", icon: <Truck size={18} /> },
+    { key: "Delivered", label: "Order Delivered", icon: <CheckCircle size={18} /> }
+  ];
+
 
 export default function OrderDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+
+
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -67,14 +97,20 @@ export default function OrderDetailsPage() {
 
   if (!order) return null;
 
+  const getStatusTime = (status: OrderStatus) => {
+    return order.statusHistory?.find(s => s.status === status)?.at;
+  };
+
+
   return (
     <section className="max-w-5xl mx-auto px-6 py-20">
       <h1 className="text-4xl font-bold text-white mb-10">
-        Order Summary
+        Order Details
       </h1>
 
-      <div className="bg-black border border-white/10 rounded-2xl p-8 space-y-8">
-        {/* HEADER */}
+      <div className="bg-black border border-white/10 rounded-2xl p-8 space-y-10">
+
+        {/* ================= HEADER ================= */}
         <div className="flex flex-col md:flex-row justify-between gap-6">
           <div>
             <p className="text-sm text-gray-400">Order ID</p>
@@ -95,7 +131,9 @@ export default function OrderDetailsPage() {
                   ? "bg-green-500/10 text-green-400"
                   : order.status === "Cancelled"
                     ? "bg-red-500/10 text-red-400"
-                    : "bg-yellow-500/10 text-yellow-400"
+                    : order.status === "Shipped"
+                      ? "bg-blue-500/10 text-blue-400"
+                      : "bg-yellow-500/10 text-yellow-400"
                 }`}
             >
               {order.status}
@@ -110,34 +148,82 @@ export default function OrderDetailsPage() {
           </div>
         </div>
 
-        {/* SHIPPING & TRACKING */}
+        {/* ================= STATUS HISTORY ================= */}
+
+        <div className="border-t border-white/10 pt-6">
+          <h2 className="text-xl text-white mb-6">
+            Order Status History
+          </h2>
+
+          <div className="space-y-5">
+            {order.statusHistory?.map((step, idx) => (
+              <div
+                key={idx}
+                className="flex items-start gap-4 rounded-xl
+      border border-white/10 bg-black/40 p-4"
+              >
+                {/* DOT */}
+                <div className="mt-1 w-3 h-3 rounded-full bg-[#d4af37]" />
+
+                {/* CONTENT */}
+                <div className="flex-1">
+                  <p className="flex items-center gap-2 text-white font-medium">
+                    {step.status === "Processing" && <Clock size={14} />}
+                    {step.status === "Shipped" && <Truck size={14} />}
+                    {step.status === "Delivered" && <CheckCircle size={14} />}
+                    {step.status === "Cancelled" && <XCircle size={14} />}
+                    {step.status}
+                  </p>
+
+                  <p className="text-xs text-gray-400">
+                    {new Date(step.at).toLocaleString()}
+                  </p>
+
+                  {/* ADMIN COMMENT */}
+                  {step.comment && (
+                    <p className="mt-2 text-sm text-gray-300 italic">
+                      “{step.comment}”
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {!order.statusHistory?.length && (
+              <p className="text-sm text-gray-500">
+                Status history not available for this order.
+              </p>
+            )}
+          </div>
+
+        </div>
+
+
+        {/* ================= SHIPPING INFO ================= */}
         {order.trackingId && (
-          <div className="mt-8 rounded-2xl border border-white/10 bg-black/50 p-6">
+          <div className="rounded-2xl border border-white/10 bg-black/50 p-6">
             <h3 className="text-lg font-semibold text-white mb-4">
               Shipping Information
             </h3>
 
-            <div className="grid gap-2 text-sm">
-              <p className="text-gray-400">
-                Courier:
-                <span className="ml-2 text-white font-medium">
-                  {order.courier}
-                </span>
-              </p>
+            <p className="text-gray-400 text-sm">
+              Courier:
+              <span className="ml-2 text-white font-medium">
+                {order.courier}
+              </span>
+            </p>
 
-              <p className="text-gray-400">
-                Tracking ID:
-                <span className="ml-2 text-[#d4af37] font-semibold tracking-wide">
-                  {order.trackingId}
-                </span>
-              </p>
-            </div>
+            <p className="text-gray-400 text-sm mt-2">
+              Tracking ID:
+              <span className="ml-2 text-[#d4af37] font-semibold">
+                {order.trackingId}
+              </span>
+            </p>
           </div>
         )}
 
-
-        {/* ITEMS */}
-        <div className="border-t border-white/10 pt-6">
+        {/* ================= ITEMS ================= */}
+        <div>
           <h2 className="text-xl text-white mb-4">
             Ordered Items
           </h2>
@@ -146,30 +232,30 @@ export default function OrderDetailsPage() {
             {order.items.map((item, idx) => (
               <div
                 key={idx}
-                className="flex justify-between text-gray-300"
+                className="flex justify-between text-gray-300 border-b border-white/10 pb-2"
               >
                 <span>
                   {item.name} × {item.quantity}
                 </span>
                 <span>
-                  ${(item.price * item.quantity).toFixed(2)}
+                  LKR {(item.price * item.quantity).toFixed(2)}
                 </span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* SUPPORT NOTICE */}
+        {/* ================= SUPPORT ================= */}
         <div className="border-t border-white/10 pt-6 flex gap-4 items-start">
           <Headphones className="text-[#d4af37]" />
           <p className="text-sm text-gray-400 leading-relaxed">
-            Need to modify or cancel this order?
-            Once an order is confirmed, changes must be handled by our support team.
-            Please contact us via phone or email for assistance.
+            Need help with this order? Once an order is confirmed,
+            changes must be handled by our support team.
+            Please contact us via phone or email.
           </p>
         </div>
 
-        {/* FOOTER ICON */}
+        {/* ================= FOOTER ICON ================= */}
         <div className="flex justify-center pt-6">
           <PackageCheck
             size={48}

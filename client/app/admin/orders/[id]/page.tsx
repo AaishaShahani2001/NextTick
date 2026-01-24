@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { Clock, Truck, CheckCircle, XCircle } from "lucide-react";
+
 
 /* ---------------- TYPES ---------------- */
 type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
@@ -11,6 +13,12 @@ type OrderItem = {
   name: string;
   quantity: number;
   price: number;
+};
+
+type StatusHistoryItem = {
+  status: OrderStatus;
+  at: string;
+  comment?: string;
 };
 
 type Order = {
@@ -35,8 +43,13 @@ type Order = {
   };
   discount?: number;
   subtotal?: number;
-  courier: string;
-  trackingId : string;
+  courier?: {
+    name: string;
+    trackingId?: string;
+    shippedAt?: string;
+  };
+
+  statusHistory?: StatusHistoryItem[];
 };
 
 /* ---------------- TIMELINE ---------------- */
@@ -89,6 +102,11 @@ export default function AdminOrderDetailPage() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statusComment, setStatusComment] = useState("");
+
+  const isCourierAssigned =
+    !!order?.courier?.name && !!order?.courier?.trackingId;
+
 
   /* ---------------- FETCH ORDER ---------------- */
   useEffect(() => {
@@ -120,31 +138,39 @@ export default function AdminOrderDetailPage() {
     fetchOrder();
   }, [id, router]);
 
+  /*--------------- SAVE COURIER DETAILS -------------- */
   const saveCourierDetails = async () => {
-  const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-  const res = await fetch(
-    `http://localhost:3000/api/admin/orders/${id}/courier`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        courier: order?.courier,
-        trackingId: order?.trackingId
-      })
+    if (!order?.courier?.name || !order?.courier?.trackingId) {
+      toast.error("Courier name and tracking ID are required");
+      return;
     }
-  );
 
-  if (!res.ok) {
-    toast.error("Failed to save courier details");
-    return;
-  }
+    const res = await fetch(
+      `http://localhost:3000/api/admin/orders/${id}/courier`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: order.courier.name,
+          trackingId: order.courier.trackingId
+        })
+      }
+    );
 
-  toast.success("Courier details updated");
-};
+    if (!res.ok) {
+      toast.error("Failed to save courier details");
+      return;
+    }
+
+    toast.success("Courier details updated");
+    router.push("/admin/orders");
+  };
+
 
 
   /* ---------------- UPDATE STATUS ---------------- */
@@ -160,7 +186,7 @@ export default function AdminOrderDetailPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ status: newStatus })
+          body: JSON.stringify({ status: newStatus, comment: statusComment })
         }
       );
 
@@ -168,9 +194,9 @@ export default function AdminOrderDetailPage() {
       if (!res.ok) throw new Error(data.message);
 
       toast.success("Order status updated");
-      setOrder((prev) =>
-        prev ? { ...prev, status: newStatus } : prev
-      );
+
+      setOrder(data);
+      setStatusComment("");
     } catch (err: any) {
       toast.error(err.message || "Status update failed");
     }
@@ -264,33 +290,65 @@ export default function AdminOrderDetailPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
-              placeholder="Courier Name (DHL, FedEx, PickMe, etc.)"
-              value={order.courier || ""}
+              placeholder="Courier Name (DHL, FedEx, etc.)"
+              value={order.courier?.name || ""}
+              disabled={isCourierAssigned}
               onChange={(e) =>
-                setOrder((prev) =>
-                  prev ? { ...prev, courier: e.target.value } : prev
+                setOrder(prev =>
+                  prev
+                    ? {
+                      ...prev,
+                      courier: {
+                        name: e.target.value,
+                        trackingId: prev.courier?.trackingId || "",
+                        shippedAt: prev.courier?.shippedAt
+                      }
+                    }
+                    : prev
                 )
               }
-              className="px-4 py-3 rounded-xl bg-black border border-white/10 text-white"
+              className={`px-4 py-3 rounded-xl bg-black border border-white/10 text-white
+    ${isCourierAssigned ? "opacity-60 cursor-not-allowed" : ""}`}
             />
+
+
 
             <input
               placeholder="Tracking ID"
-              value={order.trackingId || ""}
+              value={order.courier?.trackingId || ""}
+              disabled={isCourierAssigned}
               onChange={(e) =>
-                setOrder((prev) =>
-                  prev ? { ...prev, trackingId: e.target.value } : prev
+                setOrder(prev =>
+                  prev
+                    ? {
+                      ...prev,
+                      courier: {
+                        name: prev.courier?.name || "",
+                        trackingId: e.target.value,
+                        shippedAt: prev.courier?.shippedAt
+                      }
+                    }
+                    : prev
                 )
               }
-              className="px-4 py-3 rounded-xl bg-black border border-white/10 text-white"
+              className={`px-4 py-3 rounded-xl bg-black border border-white/10 text-white
+    ${isCourierAssigned ? "opacity-60 cursor-not-allowed" : ""}`}
             />
+
+
+
           </div>
 
           <button
             onClick={saveCourierDetails}
-            className="mt-4 px-6 py-3 rounded-full bg-[#d4af37] text-black font-semibold"
+            disabled={isCourierAssigned}
+            className={`mt-4 px-6 py-3 rounded-full font-semibold transition
+    ${isCourierAssigned
+                ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                : "bg-[#d4af37] text-black hover:opacity-90"
+              }`}
           >
-            Save Courier Details
+            {isCourierAssigned ? "Courier Already Assigned" : "Save Courier Details"}
           </button>
         </div>
 
@@ -300,6 +358,15 @@ export default function AdminOrderDetailPage() {
           <h2 className="text-xl font-semibold text-white mb-4">
             Order Progress
           </h2>
+
+          <textarea
+            placeholder="Admin note (visible to customer)"
+            value={statusComment}
+            onChange={(e) => setStatusComment(e.target.value)}
+            className="mb-4 w-full bg-black border border-white/20
+             text-white text-sm rounded-xl px-4 py-3 resize-none"
+          />
+
 
           {order.status === "Cancelled" ? (
             <span className="inline-block px-4 py-2 rounded-full bg-red-500/10 text-red-400 border border-red-500/30">
@@ -323,6 +390,45 @@ export default function AdminOrderDetailPage() {
           )}
 
           <OrderTimeline status={order.status} />
+
+          <div className="mt-8 space-y-4">
+            <h3 className="text-lg font-semibold text-white">
+              Status History
+            </h3>
+
+            {order.statusHistory?.map((step, idx) => (
+              <div key={idx} className="flex gap-4">
+                <div className="mt-1 w-3 h-3 rounded-full bg-[#d4af37]" />
+
+                <div>
+                  <p className="flex items-center gap-2 text-white font-medium">
+                    {step.status === "Processing" && <Clock size={14} />}
+                    {step.status === "Shipped" && <Truck size={14} />}
+                    {step.status === "Delivered" && <CheckCircle size={14} />}
+                    {step.status === "Cancelled" && <XCircle size={14} />}
+                    {step.status}
+                  </p>
+
+                  <p className="text-xs text-gray-400">
+                    {new Date(step.at).toLocaleString()}
+                  </p>
+
+                  {step.comment && (
+                    <p className="mt-1 text-sm text-gray-300 italic">
+                      “{step.comment}”
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {!order.statusHistory?.length && (
+              <p className="text-sm text-gray-500">
+                No status history available.
+              </p>
+            )}
+          </div>
+
         </div>
 
         {/* ================= ITEMS ================= */}

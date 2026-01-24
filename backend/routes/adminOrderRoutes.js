@@ -44,6 +44,7 @@ router.get("/stats/overview", adminMiddleware, async (req, res) => {
 /* ================= ALL ORDERS ================= */
 router.get("/", adminMiddleware, async (req, res) => {
   const orders = await Order.find()
+    .select("_id totalAmount status createdAt cancelledBy discount courier")
     .populate("user", "name email")
     .sort({ createdAt: -1 });
 
@@ -71,18 +72,22 @@ router.put("/:id/courier", adminMiddleware, async (req, res) => {
 });
 
 
-
-/* ================= UPDATE STATUS  ================= */
+/* ================= UPDATE STATUS ================= */
 router.put("/:id/status", adminMiddleware, async (req, res) => {
   try {
-    const { status: newStatus } = req.body;
+    const { status: newStatus, comment } = req.body;
 
     const order = await Order.findById(req.params.id);
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    //  Cancelled orders are READ-ONLY
+    // Init history safely
+    if (!order.statusHistory) {
+      order.statusHistory = [];
+    }
+
+    // Cancelled orders are read-only
     if (order.status === "Cancelled") {
       return res.status(400).json({
         message: "Cancelled orders cannot be modified"
@@ -91,7 +96,7 @@ router.put("/:id/status", adminMiddleware, async (req, res) => {
 
     const statusFlow = ["Pending", "Processing", "Shipped", "Delivered"];
 
-    // Allow cancel from ANY non-final state
+    /* ================= CANCEL ================= */
     if (newStatus === "Cancelled") {
       if (order.status === "Shipped") {
         return res.status(400).json({
@@ -99,8 +104,8 @@ router.put("/:id/status", adminMiddleware, async (req, res) => {
         });
       }
 
-      // RESTORE STOCK if cancelling from Processing
-      if (order.status === "Processing") {
+      // Restore stock if cancelled from Processing
+      if (order.status === "Processing" && order.stockReserved) {
         for (const item of order.items) {
           const product = await Product.findById(item.productId);
           if (!product) continue;
@@ -113,48 +118,45 @@ router.put("/:id/status", adminMiddleware, async (req, res) => {
 
           await product.save();
         }
+
+        order.stockReserved = false;
       }
 
       order.status = "Cancelled";
       order.cancelledBy = "admin";
 
-      await order.save();
+      order.statusHistory.push({
+        status: "Cancelled",
+        at: new Date(),
+        comment: comment || null,
+        updatedBy: "admin"
+      });
 
+      await order.save();
       return res.json(order);
     }
 
-    // From here onwards → normal forward-only logic
-    if (order.status === "Cancelled") {
-      return res.status(400).json({
-        message: "Cancelled orders cannot be modified"
-      });
-    }
-
+    /* ================= FLOW VALIDATION ================= */
     const currentIndex = statusFlow.indexOf(order.status);
     const nextIndex = statusFlow.indexOf(newStatus);
 
-    // Invalid status
     if (nextIndex === -1) {
       return res.status(400).json({ message: "Invalid status" });
     }
 
-    //  Prevent backward changes
     if (nextIndex <= currentIndex) {
       return res.status(400).json({
         message: "Order status can only move forward"
       });
     }
 
-    // STOCK DEDUCTION 
-    if (newStatus === "Processing") {
+    /* ================= STOCK RESERVATION ================= */
+    if (newStatus === "Processing" && !order.stockReserved) {
       for (const item of order.items) {
         const product = await Product.findById(item.productId);
         if (!product) continue;
 
-        const variant = product.variants.find(
-          (v) => v.sku === item.sku
-        );
-
+        const variant = product.variants.find(v => v.sku === item.sku);
         if (!variant) {
           return res.status(400).json({
             message: `Variant not found for SKU ${item.sku}`
@@ -167,19 +169,18 @@ router.put("/:id/status", adminMiddleware, async (req, res) => {
           });
         }
 
-        //  Reduce stock
         variant.stock -= item.quantity;
-
-        // Auto-disable if out of stock
         if (variant.stock === 0) {
           variant.isAvailable = false;
         }
 
         await product.save();
       }
+
+      order.stockReserved = true;
     }
 
-    // ================= SHIPPED =================
+    /* ================= SHIPPED ================= */
     if (newStatus === "Shipped") {
       if (!order.courier || !order.courier.trackingId) {
         return res.status(400).json({
@@ -190,15 +191,23 @@ router.put("/:id/status", adminMiddleware, async (req, res) => {
       order.courier.shippedAt = new Date();
     }
 
-
+    /* ================= FINAL UPDATE ================= */
     order.status = newStatus;
-    await order.save();
+    order.statusHistory.push({
+      status: newStatus,
+      at: new Date(),
+      comment: comment || null,
+      updatedBy: "admin"
+    });
 
+    await order.save();
     res.json(order);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Status update failed" });
   }
 });
+
 
 
 /* ================= GET SINGLE ORDER (ADMIN) ================= */
