@@ -18,6 +18,11 @@ type Order = {
   createdAt: string;
   cancelledBy: string;
   discount?: number;
+  courier?: {
+    name: string;
+    trackingId: string;
+    shippedAt?: string;
+  };
   user: {
     name: string;
     email: string;
@@ -74,31 +79,39 @@ export default function AdminOrdersPage() {
 
 
   /* ---------------- FETCH ORDERS ---------------- */
+  const fetchOrders = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("http://localhost:3000/api/admin/orders", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      setOrders(data);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ---------------- EFFECT ---------------- */
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const token = localStorage.getItem("token");
-
-        const res = await fetch("http://localhost:3000/api/admin/orders", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-
-        setOrders(data);
-      } catch (err: any) {
-        toast.error(err.message || "Failed to load orders");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchOrders();
+
+    // Refresh when admin returns from order detail page
+    const onFocus = () => fetchOrders();
+    window.addEventListener("focus", onFocus);
+
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  /* ---------------- STATUS UPDATE ---------------- */
-  const updateStatus = async (orderId: string, status: OrderStatus) => {
+
+/* ---------------- STATUS UPDATE ---------------- */
+  const updateStatus = async (orderId: string, status: OrderStatus, comment?: string) => {
     try {
       const token = localStorage.getItem("token");
 
@@ -110,7 +123,9 @@ export default function AdminOrdersPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ status })
+          body: JSON.stringify({
+            status, comment
+          })
         }
       );
 
@@ -137,12 +152,12 @@ export default function AdminOrdersPage() {
   };
 
   /* ---------------- ASSIGN COURIER ---------------- */
-  const openCourierModal = (orderId: string) => {
-    setSelectedOrderId(orderId);
-    setCourierName("");
-    setTrackingId("");
-    setShowCourierModal(true);
-  };
+  const openCourierModal = (order: Order) => {
+  setSelectedOrderId(order._id);
+  setCourierName(order.courier?.name || "");
+  setTrackingId(order.courier?.trackingId || "");
+  setShowCourierModal(true);
+};
 
   const assignCourierAndShip = async () => {
     if (!courierName || !trackingId || !selectedOrderId) {
@@ -447,7 +462,7 @@ export default function AdminOrdersPage() {
                           const nextStatus = e.target.value as OrderStatus;
 
                           if (nextStatus === "Shipped") {
-                            openCourierModal(o._id);
+                            openCourierModal(o);
                           } else {
                             updateStatus(o._id, nextStatus);
                           }

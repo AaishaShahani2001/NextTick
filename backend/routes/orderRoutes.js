@@ -87,7 +87,14 @@ router.post("/", authMiddleware, async (req, res) => {
       subtotal,
       discount,
       totalAmount: finalTotal,
-      paymentMethod: "COD"
+      paymentMethod: "COD",
+      status: "Pending",
+      statusHistory: [
+        {
+          status: "Pending",
+          at: new Date()
+        }
+      ]
     });
 
     await order.save();
@@ -109,7 +116,7 @@ router.get("/my", authMiddleware, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
       .sort({ createdAt: -1 })
-      //.select("_id totalAmount status createdAt cancelledBy discount");
+    //.select("_id totalAmount status createdAt cancelledBy discount");
 
     res.json(orders);
   } catch (error) {
@@ -119,7 +126,7 @@ router.get("/my", authMiddleware, async (req, res) => {
 });
 
 
-/* ================= GET A SINGLE ORDER  ================= */
+/* ================= GET A SINGLE ORDER (CUSTOMER) ================= */
 router.get("/:id", authMiddleware, async (req, res) => {
   try {
     const order = await Order.findOne({
@@ -131,11 +138,29 @@ router.get("/:id", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    res.json(order);
+    res.json({
+      _id: order._id,
+      items: order.items,
+      totalAmount: order.totalAmount,
+      status: order.status,
+      createdAt: order.createdAt,
+
+      // courier info
+      courier: order.courier?.name || null,
+      trackingId: order.courier?.trackingId || null,
+
+      // status history with admin note
+      statusHistory: order.statusHistory?.map(h => ({
+        status: h.status,
+        at: h.at,
+        comment: h.comment || null
+      }))
+    });
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch order" });
   }
 });
+
 
 
 /* ================= EDIT ORDER  ================= */
@@ -178,6 +203,11 @@ router.put("/:id/cancel", authMiddleware, async (req, res) => {
 
     order.status = "Cancelled";
     order.cancelledBy = "customer";
+
+    order.statusHistory.push({
+      status: "Cancelled",
+      at: new Date()
+    });
 
     // Restore stock
     for (const item of order.items) {

@@ -14,6 +14,7 @@ import {
 import { useCart } from "@/src/context/CartContext";
 //import { ProductType } from "@/src/types/product";
 import { useAuth } from "@/src/context/AuthContext";
+import toast from "react-hot-toast";
 
 
 /* ---------------- NAV LINKS ---------------- */
@@ -31,6 +32,8 @@ type NavbarProps = {
     collection: string;
   }[];
 };
+
+
 
 export default function Navbar({ products = [] }: NavbarProps) {
   const [open, setOpen] = useState(false);
@@ -53,10 +56,10 @@ export default function Navbar({ products = [] }: NavbarProps) {
   );
 
   /* ---------------- SEARCH LOGIC ---------------- */
-const filteredProducts =
-  query.trim().length === 0
-    ? []
-    : products.filter((p) => {
+  const filteredProducts =
+    query.trim().length === 0
+      ? []
+      : products.filter((p) => {
         const q = query.toLowerCase();
         return (
           p.name.toLowerCase().includes(q) ||
@@ -130,70 +133,76 @@ const filteredProducts =
         {/* RIGHT ICONS */}
         <div className="hidden md:flex items-center gap-5 text-gray-300 relative">
           {/* SEARCH ICON */}
-  <Search
-    onClick={() => setShowSearch(true)}
-    className="hover:text-[#d4af37] cursor-pointer transition"
-  />
+          <Search
+            onClick={() => setShowSearch(true)}
+            className="hover:text-[#d4af37] cursor-pointer transition"
+          />
 
-  {/* SEARCH INPUT + RESULTS */}
-  {showSearch && (
-    <div
-      ref={searchRef}
-      className="absolute right-0 top-full mt-4 w-80 bg-black
+          {/* SEARCH INPUT + RESULTS */}
+          {showSearch && (
+            <div
+              ref={searchRef}
+              className="absolute right-0 top-full mt-4 w-80 bg-black
       border border-white/10 rounded-xl p-4 z-50"
-    >
-      <input
-        ref={searchInputRef}
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search watches or collections..."
-        className="w-full px-4 py-2 rounded-lg bg-black
+            >
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search watches or collections..."
+                className="w-full px-4 py-2 rounded-lg bg-black
         border border-white/20 text-sm text-white
         placeholder-gray-400 focus:outline-none
         focus:border-[#d4af37]"
-      />
+              />
 
-      {/* RESULTS */}
-      {filteredProducts.length > 0 && (
-        <ul className="mt-3 max-h-60 overflow-y-auto">
-          {filteredProducts.map((product) => (
-            <li key={product._id}>
-              <Link
-                href={`/watches/${product._id}`}
-                onClick={() => {
-                  setShowSearch(false);
-                  setQuery("");
-                }}
-                className="block px-3 py-2 text-sm text-gray-300
+              {/* RESULTS */}
+              {filteredProducts.length > 0 && (
+                <ul className="mt-3 max-h-60 overflow-y-auto">
+                  {filteredProducts.map((product) => (
+                    <li key={product._id}>
+                      <Link
+                        href={`/watches/${product._id}`}
+                        onClick={() => {
+                          setShowSearch(false);
+                          setQuery("");
+                        }}
+                        className="block px-3 py-2 text-sm text-gray-300
                 hover:bg-white/5 rounded-lg"
-              >
-                {product.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+                      >
+                        {product.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-      {/* EMPTY STATE */}
-      {query.length > 0 && filteredProducts.length === 0 && (
-        <p className="mt-3 text-sm text-gray-400">
-          No results found
-        </p>
-      )}
-    </div>
-  )}
+              {/* EMPTY STATE */}
+              {query.length > 0 && filteredProducts.length === 0 && (
+                <p className="mt-3 text-sm text-gray-400">
+                  No results found
+                </p>
+              )}
+            </div>
+          )}
 
-          <Link href="/cart" className="relative">
-            <ShoppingCart className="hover:text-[#d4af37] cursor-pointer transition" />
+          {isLoggedIn && (
+            <Link href="/cart" className="relative">
+              <ShoppingCart className="hover:text-[#d4af37] transition cursor-pointer" />
 
-            {mounted && cart.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-[#d4af37] text-black
-      text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                {cart.reduce((total, item) => total + item.quantity, 0)}
-              </span>
-            )}
-          </Link>
+              {mounted && cart.length > 0 && (
+                <span
+                  className="absolute -top-2 -right-2 bg-[#d4af37] text-black
+        text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center"
+                >
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+          )}
+
+
 
 
           {/* AUTH SECTION */}
