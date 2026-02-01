@@ -64,13 +64,14 @@ const orderSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+      enum: ["Awaiting Payment", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
       default: "Pending"
     },
 
     paymentMethod: {
       type: String,
-      default: "COD"
+      enum: ["COD", "ONLINE"],
+      required: true
     },
 
     cancelledBy: {
@@ -83,7 +84,7 @@ const orderSchema = new mongoose.Schema(
       {
         status: {
           type: String,
-          enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+          enum: ["Awaiting Payment", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
           required: true
         },
         at: {
@@ -97,6 +98,22 @@ const orderSchema = new mongoose.Schema(
         }
       }
     ],
+
+    paymentMethod: {
+      type: String,
+      enum: ["COD", "ONLINE"],
+      required: true
+    },
+
+    paymentStatus: {
+      type: String,
+      enum: ["Pending", "Paid", "Failed", "Refunded"],
+      default: "Pending"
+    },
+
+    paymentIntentId: String, // Stripe / PayHere
+    paidAt: Date
+
 
 
 

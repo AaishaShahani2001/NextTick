@@ -46,7 +46,7 @@ export default function ProfilePage() {
 
     const token = localStorage.getItem("token");
 
-    const res = await fetch("http://localhost:3000/api/me", {
+    const res = await fetch("http://localhost:5000/api/me", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

@@ -17,7 +17,7 @@ export default function LatestArrivals() {
     const fetchLatest = async () => {
       try {
         const res = await fetch(
-          "http://localhost:3000/api/products/onlyfour?limit=4&sort=createdAt_desc",
+          "http://localhost:5000/api/products/onlyfour?limit=4&sort=createdAt_desc",
           { cache: "no-store" }
         );
 

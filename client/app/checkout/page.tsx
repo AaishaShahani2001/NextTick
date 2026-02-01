@@ -12,6 +12,8 @@ import Image from "next/image";
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, clearCart } = useCart();
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "ONLINE">("COD");
+
 
   const [form, setForm] = useState({
     name: "",
@@ -56,17 +58,92 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
-    if (!form.name || !form.email || !form.address || !form.phone || !form.city || !form.postalCode || !form.province || !form.country) {
-      toast.error("Please fill all fields");
+    // FORM VALIDATION
+    for (const key of Object.keys(form)) {
+      if (!(form as any)[key]) {
+        toast.error("Please fill all shipping fields");
+        return;
+      }
+    }
+
+    if (cart.length === 0) {
+      toast.error("Your cart is empty");
       return;
     }
 
+    // ONLINE PAYMENT → REDIRECT
+    if (paymentMethod === "ONLINE") {
+      setLoading(true);
+
+      try {
+        const token = localStorage.getItem("token");
+
+        const res = await fetch("http://localhost:5000/api/orders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+          },
+          body: JSON.stringify({
+            items: cart.map((item) => ({
+              productId: item.product._id,
+              sku: item.selectedVariant.sku,
+              name: item.product.name,
+              price:
+                item.product.basePrice +
+                item.selectedVariant.priceAdjustment,
+              quantity: item.quantity
+            })),
+            shippingAddress: form,
+            paymentMethod: "ONLINE"
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+
+        // SAVE ORDER ID
+        sessionStorage.setItem("orderId", data.orderId);
+
+        sessionStorage.setItem(
+          "checkoutData",
+          JSON.stringify({
+            cart,
+            form,
+            subtotal,
+            discount,
+            total: totalAfterDiscount
+          })
+        );
+
+        router.push("/payment");
+        return;
+      } catch (err: any) {
+        toast.error(err.message || "Failed to initiate payment");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+
+    // COD → PLACE ORDER DIRECTLY
+    await placeOrderCOD();
+  };
+
+
+  useEffect(() => {
+    if (cart.length === 0) {
+      router.replace("/cart");
+    }
+  }, [cart, router]);
+
+  const placeOrderCOD = async () => {
     setLoading(true);
 
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch("http://localhost:3000/api/orders", {
+      const res = await fetch("http://localhost:5000/api/orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -77,49 +154,36 @@ export default function CheckoutPage() {
             productId: item.product._id,
             sku: item.selectedVariant.sku,
             name: item.product.name,
-            price: item.product.basePrice + item.selectedVariant.priceAdjustment,
-            quantity: item.quantity,
-            image:
-              Object.values(item.product.images ?? {})[0] ||
-              "/placeholder-watch.jpg"
+            price:
+              item.product.basePrice +
+              item.selectedVariant.priceAdjustment,
+            quantity: item.quantity
           })),
           shippingAddress: form,
           subtotal,
           discount,
-          totalAmount: totalAfterDiscount
+          totalAmount: totalAfterDiscount,
+          paymentMethod: "COD",
+          paymentStatus: "Pending"
         })
       });
 
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Order failed");
-      }
+      if (!res.ok) throw new Error(data.message);
 
       toast.success("Order placed successfully 🎉");
 
-      //  MARK SUCCESS FIRST
       sessionStorage.setItem("orderSuccess", "true");
-
-      //  NAVIGATE FIRST
       router.push("/order-success");
 
-      // CLEAR CART AFTER NAVIGATION
-      setTimeout(() => {
-        clearCart();
-      }, 0);
+      setTimeout(() => clearCart(), 0);
     } catch (err: any) {
-      toast.error(err.message || "Something went wrong");
+      toast.error(err.message || "Order failed");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (cart.length === 0) {
-      router.replace("/cart");
-    }
-  }, [cart, router]);
 
 
 
@@ -260,6 +324,54 @@ export default function CheckoutPage() {
             </span>
           </div>
 
+          {/* ================= PAYMENT METHOD ================= */}
+          <div className="mt-10">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Payment Method
+            </h3>
+
+            <div className="space-y-3">
+              {/* COD */}
+              <label
+                className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer
+      ${paymentMethod === "COD"
+                    ? "border-[#d4af37] bg-[#d4af37]/10"
+                    : "border-white/10 bg-black"
+                  }`}
+              >
+                <input
+                  type="radio"
+                  checked={paymentMethod === "COD"}
+                  onChange={() => setPaymentMethod("COD")}
+                  className="accent-[#d4af37]"
+                />
+                <span className="text-white font-medium">
+                  Cash on Delivery
+                </span>
+              </label>
+
+              {/* ONLINE */}
+              <label
+                className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer
+      ${paymentMethod === "ONLINE"
+                    ? "border-[#d4af37] bg-[#d4af37]/10"
+                    : "border-white/10 bg-black"
+                  }`}
+              >
+                <input
+                  type="radio"
+                  checked={paymentMethod === "ONLINE"}
+                  onChange={() => setPaymentMethod("ONLINE")}
+                  className="accent-[#d4af37]"
+                />
+                <span className="text-white font-medium">
+                  Online Payment (Card / Wallet)
+                </span>
+              </label>
+            </div>
+          </div>
+
+
           {/* CTA */}
           <button
             onClick={handlePlaceOrder}
@@ -272,8 +384,12 @@ export default function CheckoutPage() {
           </button>
 
           <p className="mt-4 text-xs text-gray-500 text-center">
-            Secure checkout · Cash on Delivery
+            Secure checkout ·{" "}
+            {paymentMethod === "COD"
+              ? "Cash on Delivery"
+              : "Online Payment"}
           </p>
+
         </div>
       </div>
     </section>

@@ -12,7 +12,7 @@ export default function OrderSuccessPage() {
     const success = sessionStorage.getItem("orderSuccess");
 
     if (!success) {
-      router.replace("/cart");
+      router.replace("/");
     }
   }, [router]);
 

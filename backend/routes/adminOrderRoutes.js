@@ -44,7 +44,7 @@ router.get("/stats/overview", adminMiddleware, async (req, res) => {
 /* ================= ALL ORDERS ================= */
 router.get("/", adminMiddleware, async (req, res) => {
   const orders = await Order.find()
-    .select("_id totalAmount status createdAt cancelledBy discount courier")
+    .select("_id totalAmount status createdAt cancelledBy discount courier paymentMethod")
     .populate("user", "name email")
     .sort({ createdAt: -1 });
 
@@ -222,6 +222,79 @@ router.get("/:id", adminMiddleware, async (req, res) => {
   res.json(order);
 });
 
+/* ================= ADMIN CANCEL WITH REFUND ================= */
+router.put("/:id/cancel-refund", adminMiddleware, async (req, res) => {
+  try {
+    const { comment } = req.body;
+
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    /*  ALREADY CANCELLED */
+    if (order.status === "Cancelled") {
+      return res.status(400).json({
+        message: "Order is already cancelled"
+      });
+    }
+
+    /*  DELIVERED ORDERS */
+    if (order.status === "Delivered") {
+      return res.status(400).json({
+        message: "Delivered orders cannot be cancelled"
+      });
+    }
+
+    /* ================= REFUND LOGIC ================= */
+    if (order.paymentMethod === "ONLINE") {
+      if (order.paymentStatus !== "Paid") {
+        return res.status(400).json({
+          message: "Online payment not completed. Cannot refund."
+        });
+      }
+
+      // MOCK REFUND (Stripe / PayHere would go here)
+      order.paymentStatus = "Refunded";
+    }
+
+    /* ================= RESTORE STOCK ================= */
+    for (const item of order.items) {
+      await Product.updateOne(
+        {
+          _id: item.productId,
+          "variants.sku": item.sku
+        },
+        {
+          $inc: { "variants.$.stock": item.quantity }
+        }
+      );
+    }
+
+    /* ================= FINAL ORDER UPDATE ================= */
+    order.status = "Cancelled";
+    order.cancelledBy = "admin";
+
+    order.statusHistory.push({
+      status: "Cancelled",
+      at: new Date(),
+      comment: comment || "Cancelled by admin with refund",
+      updatedBy: "admin"
+    });
+
+    await order.save();
+
+    res.json({
+      message: "Order cancelled and refund processed successfully",
+      order
+    });
+  } catch (err) {
+    console.error("Admin cancel refund error:", err);
+    res.status(500).json({
+      message: "Admin cancel with refund failed"
+    });
+  }
+});
 
 
 

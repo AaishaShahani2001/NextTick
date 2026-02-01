@@ -30,7 +30,7 @@ export default function AdminProductDetailPage() {
         const token = localStorage.getItem("token");
 
         const res = await fetch(
-          `http://localhost:3000/api/admin/products/${id}`,
+          `http://localhost:5000/api/admin/products/${id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`

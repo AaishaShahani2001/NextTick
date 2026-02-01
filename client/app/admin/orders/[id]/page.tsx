@@ -7,7 +7,7 @@ import { Clock, Truck, CheckCircle, XCircle } from "lucide-react";
 
 
 /* ---------------- TYPES ---------------- */
-type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
+type OrderStatus = "Awaiting Payment" | "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
 
 type OrderItem = {
   name: string;
@@ -54,7 +54,7 @@ type Order = {
 
 /* ---------------- TIMELINE ---------------- */
 const OrderTimeline = ({ status }: { status: OrderStatus }) => {
-  const steps: OrderStatus[] = ["Pending", "Processing", "Shipped", "Delivered"];
+  const steps: OrderStatus[] = ["Awaiting Payment", "Pending", "Processing", "Shipped", "Delivered"];
 
   return (
     <div className="flex items-center gap-4 mt-4">
@@ -89,6 +89,7 @@ const OrderTimeline = ({ status }: { status: OrderStatus }) => {
 
 /* ---------------- STATUS FLOW ---------------- */
 const getAllowedNextStatuses = (status: OrderStatus) => {
+  if (status === "Awaiting Payment") return ["Pending"];
   if (status === "Pending") return ["Processing"];
   if (status === "Processing") return ["Shipped"];
   if (status === "Shipped") return ["Delivered"];
@@ -115,7 +116,7 @@ export default function AdminOrderDetailPage() {
         const token = localStorage.getItem("token");
 
         const res = await fetch(
-          `http://localhost:3000/api/admin/orders/${id}`,
+          `http://localhost:5000/api/admin/orders/${id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`
@@ -148,7 +149,7 @@ export default function AdminOrderDetailPage() {
     }
 
     const res = await fetch(
-      `http://localhost:3000/api/admin/orders/${id}/courier`,
+      `http://localhost:5000/api/admin/orders/${id}/courier`,
       {
         method: "PUT",
         headers: {
@@ -179,7 +180,7 @@ export default function AdminOrderDetailPage() {
       const token = localStorage.getItem("token");
 
       const res = await fetch(
-        `http://localhost:3000/api/admin/orders/${id}/status`,
+        `http://localhost:5000/api/admin/orders/${id}/status`,
         {
           method: "PUT",
           headers: {
@@ -402,6 +403,7 @@ export default function AdminOrderDetailPage() {
 
                 <div>
                   <p className="flex items-center gap-2 text-white font-medium">
+                    {step.status === "Awaiting Payment" && <Clock size={14} />}
                     {step.status === "Processing" && <Clock size={14} />}
                     {step.status === "Shipped" && <Truck size={14} />}
                     {step.status === "Delivered" && <CheckCircle size={14} />}

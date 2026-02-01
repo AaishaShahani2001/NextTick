@@ -26,7 +26,7 @@ export default function CollectionsPage() {
     try {
       setLoading(true);
       const res = await fetch(
-        "http://localhost:3000/api/products/collections",
+        "http://localhost:5000/api/products/collections",
         { cache: "no-store" }
       );
 

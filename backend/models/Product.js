@@ -13,7 +13,7 @@ const variantSchema = new mongoose.Schema(
 
     strapType: {
       type: String,
-      enum: ["Leather", "Metal", "Silicone"],
+      enum: ["Leather", "Metal", "Silicone", "Fabric"],
       required: true,
     },
 

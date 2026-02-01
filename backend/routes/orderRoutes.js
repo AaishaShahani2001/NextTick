@@ -11,7 +11,7 @@ const DISCOUNT_PERCENT = 5;
 /* ================= CREATE ORDER ================= */
 router.post("/", authMiddleware, async (req, res) => {
   try {
-    const { items, shippingAddress } = req.body;
+    const { items, shippingAddress, paymentMethod = "COD" } = req.body;
 
     const { name, email, phone, address, city, province, country, postalCode } = shippingAddress || {};
 
@@ -20,6 +20,18 @@ router.post("/", authMiddleware, async (req, res) => {
         message: "Incomplete shipping address"
       });
     }
+
+    if (!["COD", "ONLINE"].includes(paymentMethod)) {
+      return res.status(400).json({
+        message: "Invalid payment method"
+      });
+    }
+
+    const paymentStatus =
+      paymentMethod === "COD" ? "Pending" : "Pending";
+
+    const initialStatus =
+      paymentMethod === "COD" ? "Pending" : "Awaiting Payment";
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: "No items in order" });
@@ -52,18 +64,21 @@ router.post("/", authMiddleware, async (req, res) => {
       }
     }
 
-    // Deduct stock
-    for (const item of items) {
-      await Product.updateOne(
-        {
-          _id: item.productId,
-          "variants.sku": item.sku
-        },
-        {
-          $inc: { "variants.$.stock": -item.quantity }
-        }
-      );
+    // Deduct stock ONLY for COD
+    if (paymentMethod === "COD") {
+      for (const item of items) {
+        await Product.updateOne(
+          {
+            _id: item.productId,
+            "variants.sku": item.sku
+          },
+          {
+            $inc: { "variants.$.stock": -item.quantity }
+          }
+        );
+      }
     }
+
 
     // Calculate subtotal from items
     const subtotal = items.reduce(
@@ -87,11 +102,12 @@ router.post("/", authMiddleware, async (req, res) => {
       subtotal,
       discount,
       totalAmount: finalTotal,
-      paymentMethod: "COD",
-      status: "Pending",
+      paymentMethod,
+      paymentStatus,
+      status: initialStatus,
       statusHistory: [
         {
-          status: "Pending",
+          status: initialStatus,
           at: new Date()
         }
       ]
@@ -116,7 +132,7 @@ router.get("/my", authMiddleware, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
       .sort({ createdAt: -1 })
-    //.select("_id totalAmount status createdAt cancelledBy discount");
+    //.select("_id totalAmount status createdAt cancelledBy discount paymentStatus paymentMethod");
 
     res.json(orders);
   } catch (error) {
@@ -195,6 +211,13 @@ router.put("/:id/cancel", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
+    /* BLOCK UNPAID ONLINE ORDERS */
+    if (order.paymentMethod === "ONLINE" && order.paymentStatus !== "Paid") {
+      return res
+        .status(400)
+        .json({ message: "Unpaid orders cannot be cancelled" });
+    }
+
     if (order.status !== "Pending") {
       return res.status(400).json({
         message: "Only pending orders can be cancelled"
@@ -206,7 +229,8 @@ router.put("/:id/cancel", authMiddleware, async (req, res) => {
 
     order.statusHistory.push({
       status: "Cancelled",
-      at: new Date()
+      at: new Date(),
+      comment: "Cancelled by customer"
     });
 
     // Restore stock
@@ -221,6 +245,17 @@ router.put("/:id/cancel", authMiddleware, async (req, res) => {
         }
       );
     }
+
+    // /*  UPDATE PAYMENT INFO */
+    // order.paymentStatus = "Paid";
+    // order.paidAt = new Date();
+
+    // order.status = "Pending";
+    // order.statusHistory.push({
+    //   status: "Pending",
+    //   at: new Date(),
+    //   comment: "Payment completed successfully"
+    // });
 
 
     await order.save();
@@ -259,6 +294,52 @@ router.put("/:id/edit-request", authMiddleware, async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Edit request failed" });
   }
+});
+
+
+/* ===== PAYMENT SUCCESS (ONLINE) ===== */
+router.put("/:id/payment-success", authMiddleware, async (req, res) => {
+  const order = await Order.findOne({
+    _id: req.params.id,
+    user: req.user._id
+  });
+
+  if (!order) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  if (order.paymentMethod !== "ONLINE") {
+    return res.status(400).json({ message: "Invalid payment method" });
+  }
+
+  if (order.paymentStatus === "Paid") {
+    return res.status(400).json({ message: "Already paid" });
+  }
+
+  // Deduct stock NOW
+  for (const item of order.items) {
+    await Product.updateOne(
+      {
+        _id: item.productId,
+        "variants.sku": item.sku
+      },
+      {
+        $inc: { "variants.$.stock": -item.quantity }
+      }
+    );
+  }
+
+  order.paymentStatus = "Paid";
+  order.status = "Pending";
+  order.statusHistory.push({
+    status: "Pending",
+    at: new Date(),
+    comment: "Payment completed successfully"
+  });
+
+  await order.save();
+
+  res.json({ message: "Payment successful" });
 });
 
 

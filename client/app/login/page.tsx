@@ -23,7 +23,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3000/api/auth/login", {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
@@ -40,7 +40,7 @@ export default function LoginPage() {
       await loginWithToken(data.token);
 
       //  Immediately confirm role (no state timing issues)
-      const meRes = await fetch("http://localhost:3000/api/me", {
+      const meRes = await fetch("http://localhost:5000/api/me", {
         headers: {
           Authorization: `Bearer ${data.token}`
         }
