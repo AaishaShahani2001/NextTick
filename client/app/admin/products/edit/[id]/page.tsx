@@ -37,7 +37,7 @@ export default function EditProductPage() {
     const fetchProduct = async () => {
       try {
         const res = await fetch(
-          `http://localhost:3000/api/admin/products/${id}`,
+          `http://localhost:5000/api/admin/products/${id}`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`

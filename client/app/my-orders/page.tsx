@@ -8,7 +8,10 @@ import toast from "react-hot-toast";
 
 
 /* ---------------- TYPES ---------------- */
-type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
+type OrderStatus = "Awaiting Payment" | "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
+
+type PaymentMethod = "COD" | "ONLINE";
+type PaymentStatus = "Pending" | "Paid" | "Failed" | "Refunded";
 
 type Order = {
   _id: string;
@@ -17,6 +20,8 @@ type Order = {
   status: OrderStatus;
   cancelledBy: string;
   discount?: number;
+  paymentMethod: PaymentMethod;
+  paymentStatus?: PaymentStatus;
   courier?: {
     name: string;
     trackingId: string;
@@ -49,7 +54,7 @@ const courierTrackingUrls: Record<string, (id: string) => string> = {
 
 /* ---------------- ORDER TIMELINE ---------------- */
 const OrderTimeline = ({ status }: { status: OrderStatus }) => {
-  const steps: OrderStatus[] = ["Pending", "Processing", "Shipped", "Delivered"];
+  const steps: OrderStatus[] = ["Awaiting Payment", "Pending", "Processing", "Shipped", "Delivered"];
 
   return (
     <div className="flex items-center gap-3 mt-4">
@@ -157,7 +162,7 @@ export default function MyOrdersPage() {
           return;
         }
 
-        const res = await fetch("http://localhost:3000/api/orders/my", {
+        const res = await fetch("http://localhost:5000/api/orders/my", {
           headers: { Authorization: `Bearer ${token}` }
         });
 
@@ -184,12 +189,20 @@ export default function MyOrdersPage() {
   }, []);
 
   /* ---------------- ACTION HANDLERS ---------------- */
-  const handleRestrictedAction = () => {
+  const handleRestrictedAction = (order?: Order) => {
+    if (order?.paymentMethod === "ONLINE") {
+      toast("Online payment orders cannot be cancelled by customers.", {
+        icon: "🔒"
+      });
+      return;
+    }
+
     toast(
       "This order can no longer be modified. Please contact the store or support.",
       { icon: "📞" }
     );
   };
+
 
   const handleEditOrder = () => {
     toast(
@@ -230,7 +243,7 @@ export default function MyOrdersPage() {
       const token = localStorage.getItem("token");
 
       const res = await fetch(
-        `http://localhost:3000/api/orders/${selectedOrder}/cancel`,
+        `http://localhost:5000/api/orders/${selectedOrder}/cancel`,
         {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}` }
@@ -309,7 +322,9 @@ export default function MyOrdersPage() {
       ) : (
         <div className="space-y-8">
           {orders.map((order) => {
-            const isEditable = order.status === "Pending" && order.cancelledBy !== "admin";
+            const isEditable = order.status === "Pending" &&
+              order.cancelledBy !== "admin" &&
+              order.paymentMethod !== "ONLINE";
 
             return (
               <div
@@ -338,11 +353,16 @@ export default function MyOrdersPage() {
                       LKR {order.totalAmount}
                     </p>
 
-                    {typeof order.discount === "number" && order.discount > 0 && (
-                      <p className="text-xs text-green-400 mt-1">
-                        You saved LKR {order.discount.toLocaleString()}
-                      </p>
-                    )}
+                    {typeof order.discount === "number" &&
+                      order.discount > 0 &&
+                      !(order.status === "Cancelled" &&
+                        order.cancelledBy === "admin" &&
+                        order.paymentMethod === "ONLINE") && (
+                        <p className="text-xs text-green-400 mt-1">
+                          You saved LKR {order.discount.toLocaleString()}
+                        </p>
+                      )}
+
                   </div>
 
                   <div className="flex items-center gap-2 whitespace-nowrap">
@@ -366,19 +386,30 @@ export default function MyOrdersPage() {
                           : "Cancelled by you"
                         : order.status}
                     </span>
+                    {/* PAYMENT METHOD BADGE */}
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium border
+    ${order.paymentMethod === "ONLINE"
+                          ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                          : "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                        }`}
+                    >
+                      {order.paymentMethod === "ONLINE" ? "ONLINE" : "COD"}
+                    </span>
+
 
                     {/* DISCOUNT BADGE */}
-                    {typeof order.discount === "number" && order.discount > 0 && (
-                      <span
-                        className="
-        px-3 py-1 rounded-full text-xs font-medium
-        bg-green-500/10 text-green-400
-        border border-green-500/20
-      "
-                      >
-                        🎉 Discount Applied
-                      </span>
-                    )}
+                    {typeof order.discount === "number" &&
+                      order.discount > 0 &&
+                      !(order.status === "Cancelled" &&
+                        order.cancelledBy === "admin" &&
+                        order.paymentMethod === "ONLINE") && (
+                        <span className="px-3 py-1 rounded-full text-xs font-medium
+      bg-green-500/10 text-green-400 border border-green-500/20">
+                          🎉 Discount Applied
+                        </span>
+                      )}
+
                   </div>
 
 
@@ -394,8 +425,8 @@ export default function MyOrdersPage() {
                     <button
                       onClick={
                         isEditable
-                          ? handleEditOrder
-                          : handleRestrictedAction
+                          ? () => confirmCancel(order._id)
+                          : () => handleRestrictedAction(order)
                       }
                       className={`p-2 rounded-full border
                       ${isEditable
@@ -410,7 +441,7 @@ export default function MyOrdersPage() {
                       onClick={
                         isEditable
                           ? () => confirmCancel(order._id)
-                          : handleRestrictedAction
+                          : () => handleRestrictedAction(order)
                       }
                       className={`p-2 rounded-full border
                       ${isEditable
@@ -469,6 +500,16 @@ export default function MyOrdersPage() {
 
 
                 <OrderTimeline status={order.status} />
+
+                {order.status === "Cancelled" &&
+                  order.cancelledBy === "admin" &&
+                  order.paymentMethod === "ONLINE" && (
+                    <p className="mt-2 text-sm text-blue-400">
+                      ❌ Cancelled by admin · 💳 Payment refunded
+                    </p>
+                  )}
+
+
 
                 {order.status === "Cancelled" &&
                   order.cancelledBy === "customer" && (

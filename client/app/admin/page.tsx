@@ -50,7 +50,7 @@ export default function AdminDashboard() {
         const token = localStorage.getItem("token");
 
         const res = await fetch(
-          "http://localhost:3000/api/admin/orders/stats/overview",
+          "http://localhost:5000/api/admin/orders/stats/overview",
           {
             headers: {
               Authorization: `Bearer ${token}`
@@ -77,7 +77,7 @@ export default function AdminDashboard() {
       const token = localStorage.getItem("token");
 
       const res = await fetch(
-        "http://localhost:3000/api/admin/products/low-stock",
+        "http://localhost:5000/api/admin/products/low-stock",
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -116,7 +116,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           title="Revenue"
-          value={`$${stats.totalRevenue.toLocaleString()}`}
+          value={`LKR ${stats.totalRevenue.toLocaleString()}`}
           icon={<DollarSign size={22} />}
         />
         <StatCard
@@ -193,7 +193,7 @@ export default function AdminDashboard() {
 
                 <div className="flex items-center gap-4">
                   <p className="text-[#d4af37] font-semibold">
-                    ${o.totalAmount}
+                    LKR {o.totalAmount}
                   </p>
 
                   <Link
@@ -237,7 +237,7 @@ export default function AdminDashboard() {
 
           <div className="flex items-center gap-4">
             <p className="text-[#d4af37] font-semibold">
-              ${p.price}
+              LKR {p.price}
             </p>
 
             <Link

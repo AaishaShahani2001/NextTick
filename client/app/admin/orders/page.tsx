@@ -9,7 +9,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 /* ---------------- TYPES ---------------- */
-type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
+type OrderStatus = "Awaiting Payment" | "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
 
 type Order = {
   _id: string;
@@ -18,6 +18,7 @@ type Order = {
   createdAt: string;
   cancelledBy: string;
   discount?: number;
+  paymentMethod: "COD" | "ONLINE";
   courier?: {
     name: string;
     trackingId: string;
@@ -83,7 +84,7 @@ export default function AdminOrdersPage() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch("http://localhost:3000/api/admin/orders", {
+      const res = await fetch("http://localhost:5000/api/admin/orders", {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -110,13 +111,13 @@ export default function AdminOrdersPage() {
   }, []);
 
 
-/* ---------------- STATUS UPDATE ---------------- */
+  /* ---------------- STATUS UPDATE ---------------- */
   const updateStatus = async (orderId: string, status: OrderStatus, comment?: string) => {
     try {
       const token = localStorage.getItem("token");
 
       const res = await fetch(
-        `http://localhost:3000/api/admin/orders/${orderId}/status`,
+        `http://localhost:5000/api/admin/orders/${orderId}/status`,
         {
           method: "PUT",
           headers: {
@@ -153,11 +154,11 @@ export default function AdminOrdersPage() {
 
   /* ---------------- ASSIGN COURIER ---------------- */
   const openCourierModal = (order: Order) => {
-  setSelectedOrderId(order._id);
-  setCourierName(order.courier?.name || "");
-  setTrackingId(order.courier?.trackingId || "");
-  setShowCourierModal(true);
-};
+    setSelectedOrderId(order._id);
+    setCourierName(order.courier?.name || "");
+    setTrackingId(order.courier?.trackingId || "");
+    setShowCourierModal(true);
+  };
 
   const assignCourierAndShip = async () => {
     if (!courierName || !trackingId || !selectedOrderId) {
@@ -170,7 +171,7 @@ export default function AdminOrdersPage() {
 
       //Assign courier
       const courierRes = await fetch(
-        `http://localhost:3000/api/admin/orders/${selectedOrderId}/courier`,
+        `http://localhost:5000/api/admin/orders/${selectedOrderId}/courier`,
         {
           method: "PUT",
           headers: {
@@ -435,7 +436,7 @@ export default function AdminOrdersPage() {
 
                 <td className="p-4">
                   <p className="text-[#d4af37] font-semibold">
-                    ${o.totalAmount}
+                    LKR {o.totalAmount}
                   </p>
 
                   {typeof o.discount === "number" && o.discount > 0 && (
@@ -448,6 +449,17 @@ export default function AdminOrdersPage() {
 
                 <td className="p-4">
                   <div className="flex items-center gap-2 whitespace-nowrap">
+                    {/* PAYMENT METHOD BADGE */}
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium border
+                       ${o.paymentMethod === "ONLINE"
+                          ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                          : "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                        }`}
+                    >
+                      {o.paymentMethod}
+                    </span>
+
                     {/* STATUS */}
                     {o.status === "Cancelled" ? (
                       <span className="text-red-400 text-sm">

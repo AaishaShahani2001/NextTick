@@ -32,7 +32,7 @@ export default function WatchDetailsPage() {
       setLoading(true);
 
       const res = await fetch(
-        `http://localhost:3000/api/products/${id}`,
+        `http://localhost:5000/api/products/${id}`,
         { cache: "no-store" }
       );
 

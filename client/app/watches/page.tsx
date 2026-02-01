@@ -33,7 +33,7 @@ export default function WatchesPage() {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const res = await fetch("http://localhost:3000/api/products", {
+        const res = await fetch("http://localhost:5000/api/products", {
           cache: "no-store"
         });
         if (!res.ok) throw new Error();

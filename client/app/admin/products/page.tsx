@@ -42,10 +42,10 @@ export default function AdminProductsPage() {
       (priceRange === "50000-150000" &&
         p.basePrice >= 50000 &&
         p.basePrice <= 150000) ||
-      (priceRange === "150000-300000" &&
+      (priceRange === "150000-500000" &&
         p.basePrice > 150000 &&
-        p.basePrice <= 300000) ||
-      (priceRange === "300000+" && p.basePrice > 300000);
+        p.basePrice <= 500000) ||
+      (priceRange === "500000+" && p.basePrice > 500000);
 
 
     return (
@@ -72,7 +72,7 @@ export default function AdminProductsPage() {
       setLoading(true);
 
       const res = await fetch(
-        "http://localhost:3000/api/admin/products",
+        "http://localhost:5000/api/admin/products",
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") || ""}`
@@ -96,7 +96,7 @@ export default function AdminProductsPage() {
   const deleteProduct = async (id: string) => {
     try {
       const res = await fetch(
-        `http://localhost:3000/api/admin/products/${id}`,
+        `http://localhost:5000/api/admin/products/${id}`,
         {
           method: "DELETE",
           headers: {
@@ -268,8 +268,8 @@ export default function AdminProductsPage() {
         >
           <option value="all">All Prices</option>
           <option value="50000-150000">LKR 50,000 – 150,000</option>
-          <option value="150000-300000">LKR 150,000 – 300,000</option>
-          <option value="300000-500000">LKR 300,000 – 500,000</option>
+          <option value="150000-500000">LKR 150,000 – 300,000</option>
+          <option value="500000-500000">LKR 300,000 – 500,000</option>
           <option value="500000-1000000">LKR 500,000 – 1,000,000</option>
         </select>
 
